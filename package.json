@@ -1,0 +1,33 @@
+{
+  "name": "webimg",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "start": "node dist/cli.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "exiftool-vendored": "^31.1.0",
+    "globby": "^15.0.0",
+    "listr2": "^9.0.4",
+    "sharp": "^0.34.4",
+    "source-map-support": "^0.5.21",
+    "winston": "^3.18.3",
+    "yargs": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "@types/source-map-support": "^0.5.10",
+    "@types/winston": "^2.4.4",
+    "@types/yargs": "^17.0.33",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
