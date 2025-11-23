@@ -48,7 +48,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         ctx.fileIndex = fileIndex;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
-          .map(file => new File({ path: path.join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null }))
+          .map(file => new File({ path: path.join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
       },
     },
     {
@@ -115,7 +115,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Converting photos',
       task: async (ctx, task) => {
-        const filesToConvert = ctx.files.filter(file => file.isImage && file.needsConversion && !file.isConverted);
+        const filesToConvert = ctx.files.filter(file => file.isImage && file.needsConversion && (!file.isConverted || !file.processed));
         const subtasks = filesToConvert.map(file => ({
           title: `Converting ${file.path}`,
           task: async () => {
@@ -136,7 +136,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Converting videos',
       task: async (ctx, task) => {
-        const filesToConvert = ctx.files.filter(file => file.isVideo && file.needsConversion && !file.isConverted);
+        const filesToConvert = ctx.files.filter(file => file.isVideo && file.needsConversion && (!file.isConverted || !file.processed));
         const subtasks = filesToConvert.map((file, i) => ({
           title: `Converting ${file.path} (${i + 1}/${filesToConvert.length})`,
           task: async () => {
@@ -160,7 +160,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         
         ctx.files.filter(file => file.isImage).forEach(file => {
           file.sizes.forEach(size => {
-            if (size.image && !file.isResizedTo(size.name)) {
+            if (size.image && (!file.isResizedTo(size.name) || !file.processed)) {
               subtasks.push({
                 title: `Resizing ${file.path} to ${size.name}`,
                 task: async () => {
@@ -188,7 +188,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         
         ctx.files.filter(file => file.isVideo).forEach(file => {
           file.sizes.forEach(size => {
-            if (size.video && !file.isResizedTo(size.name)) {
+            if (size.video && (!file.isResizedTo(size.name) || !file.processed)) {
               subtasks.push({
                 title: `Resizing ${file.path} to ${size.name}`,
                 task: async () => {
@@ -216,7 +216,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         
         ctx.files.filter(file => file.isVideo).forEach(file => {
           file.sizes.forEach(size => {
-            if (size.image && size.videoPreview !== false && !file.isVideoPreviewGenerated(size.name)) {
+            if (size.image && size.videoPreview !== false && (!file.isVideoPreviewGenerated(size.name) || !file.processed)) {
               subtasks.push({
                 title: `Generating video preview for ${file.path} to ${size.name}`,
                 task: async () => {
@@ -261,6 +261,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
       title: 'Updating processed files in index',
       task: async (ctx, task) => {
         ctx.fileIndex.updateAsProcessed(ctx.files.map(file => file.indexId));
+        ctx.files.forEach(file => file.processed = true);
       }
     },
     {

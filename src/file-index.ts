@@ -86,7 +86,7 @@ export class FileIndex {
 
         if (entry.file_mtime !== file.mtime) {
           this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?').run(file.mtime, entry.id);
-          this.logger.log(`Updated ${file.indexPath} in index: file mtime updated.`);
+          this.logger.log(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);
         } else if (!entry.exists) {
           this.db.prepare('UPDATE files SET "exists" = 1 WHERE id = ?').run(entry.id);
           this.logger.log(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);

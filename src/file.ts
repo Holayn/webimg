@@ -40,14 +40,16 @@ export class File {
   indexId: number;
   metadata: FileMetadata | null;
   sizes: FileResizeSize[];
+  processed: boolean;
 
-  constructor({ path, input, output, indexId, sizes, metadata }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null }) {
+  constructor({ path, input, output, indexId, sizes, metadata, processed = false }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null, processed: boolean }) {
     this.path = path;
     this.input = input;
     this.output = output;
     this.indexId = indexId;
     this.metadata = metadata || null;
     this.sizes = sizes || DEFAULT_SIZES;
+    this.processed = processed;
   }
 
   get relpath() {
