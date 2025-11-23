@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import { stat } from "node:fs/promises";
 import { findFiles } from "./util.js";
 import { File } from "./file.js";
-import path, { normalize } from "node:path";
+import { relative, normalize } from "node:path";
 import { ExifData } from "./exif-extractor.js";
 import { ExifDateTime } from "exiftool-vendored/dist/ExifDateTime.js";
 
@@ -19,6 +19,9 @@ interface FileIndexEntry {
   metadata: Buffer | null;
   exists: number;
   processed: number;
+
+  // Handle deprecated field
+  timestamp?: number;
 }
 
 export class FileIndex {
@@ -40,6 +43,15 @@ export class FileIndex {
         processed INTEGER
       );
     `);
+
+    try {
+      // Handle old indexes that don't have "exists" column.
+      this.db.prepare('ALTER TABLE files ADD COLUMN "exists" INTEGER NOT NULL DEFAULT 1').run();
+    } catch (e) {}
+    try {
+      // Handle old indexes that don't have "file_mtime" column.
+      this.db.prepare('ALTER TABLE files ADD COLUMN file_mtime INTEGER NOT NULL DEFAULT 0').run();
+    } catch (e) {}
   }
 
   async update(input: string, exclude?: string[]): Promise<void> {
@@ -51,7 +63,7 @@ export class FileIndex {
     const filesToAddToIndex = await Promise.all(filePaths
       .map(async filePath => {
         const stats = await stat(filePath);
-        return { path: filePath, relpath: path.relative(input, filePath), mtime: stats.mtime.getTime() };
+        return { path: filePath, relpath: relative(input, filePath), indexPath: relative(input, filePath).replaceAll('\\', '/'), mtime: stats.mtime.getTime() };
       })
     );
 
@@ -60,21 +72,27 @@ export class FileIndex {
 
     // Update existing files
     filesToAddToIndex.forEach(file => {
-      const entry = entriesMap.get(file.relpath);
+      const entry = entriesMap.get(file.indexPath);
       if (entry) {
+        if (entry.timestamp && !entry.file_mtime) {
+          entry.file_mtime = entry.timestamp;
+          // Metadata in old index needs to be refreshed.
+          this.db.prepare('UPDATE files SET file_mtime = ?, metadata = null WHERE id = ?').run(entry.timestamp, entry.id);
+        }
+
         if (entry.file_mtime !== file.mtime) {
           this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?').run(file.mtime, entry.id);
         } else if (!entry.exists) {
           this.db.prepare('UPDATE files SET "exists" = 1 WHERE id = ?').run(entry.id);
         }
       } else {
-        this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)').run(file.relpath, file.mtime, null, null, 1, 0);
+        this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)').run(file.indexPath, file.mtime, null, null, 1, 0);
       }
     });
 
     // Update files that no longer exist
     entriesMap.forEach(entry => {
-      if (!filesToAddToIndex.find(file => file.relpath === entry.path)) {
+      if (!filesToAddToIndex.find(file => file.indexPath === entry.path)) {
         this.db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?').run(entry.id);
       }
     });
