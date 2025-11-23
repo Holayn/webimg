@@ -43,7 +43,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Indexing files',
       task: async (ctx, task) => {
-        const fileIndex = new FileIndex(output);
+        const fileIndex = new FileIndex(output, logger);
         await fileIndex.update(input, exclude);
         ctx.fileIndex = fileIndex;
         ctx.files = ctx.fileIndex.getIndexedFiles()
@@ -120,7 +120,8 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           title: `Converting ${file.path}`,
           task: async () => {
             try {
-              await convertImg({ file, relocatePath: convertedPath, fileIndex: ctx.fileIndex });
+              await convertImg({ file, relocatePath: convertedPath });
+              logger.log(`Converted ${file.path} to ${file.conversionDest}`);
               ctx.convertedFiles.push(file);
             } catch (e) {
               logger.error(e);
@@ -141,6 +142,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           task: async () => {
             try {
               await convertVideo({ file, relocatePath: convertedPath });
+              logger.log(`Converted ${file.path} to ${file.conversionDest}`);
               ctx.convertedFiles.push(file);
             } catch (e) {
               logger.error(e);
@@ -165,6 +167,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
                   try {
                     await resizeImg(file, size);
                     ctx.resizedFiles.push(file);
+                    logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
                   } catch (e) {
                     logger.error(e);
                     ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
@@ -192,6 +195,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
                   try {
                     await resizeVideo(file, size);
                     ctx.resizedFiles.push(file);
+                    logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
                   } catch (e) {
                     logger.error(e);
                     ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
@@ -219,6 +223,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
                   try {
                     await generateVideoPreview({ file, size });
                     ctx.resizedFiles.push(file);
+                    logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
                   } catch (e) {
                     logger.error(e);
                     ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
@@ -242,6 +247,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
             try {
               await createOriginalSymlink(file);
               ctx.symlinkedFiles.push(file);
+              logger.log(`Linked ${file.path} to ${file.originalDest}`);
             } catch (e) {
               logger.error(e);
               ctx.problemFiles.push({ file, task: 'Original symlink creation' });
@@ -273,11 +279,10 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         const filePathsToDelete = outputFiles.filter(file => !filesToKeep.has(file));
         ctx.deletedPaths = filePathsToDelete;
 
-        if (filePathsToDelete.length > 0) {
-          logger.log(`Deleting files:\n${filePathsToDelete.join('\n')}`);
-        }
-
-        await Promise.all(filePathsToDelete.map(filePath => unlink(filePath)));
+        await Promise.all(filePathsToDelete.map(async filePath => {
+          await unlink(filePath);
+          logger.log(`Deleted ${filePath}`);
+        }));
 
         if (convertedPath) {
           const relocatedFilePaths = await findFiles(convertedPath);

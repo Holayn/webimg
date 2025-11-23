@@ -6,6 +6,7 @@ import { File } from "./file.js";
 import { relative, normalize } from "node:path";
 import { ExifData } from "./exif-extractor.js";
 import { ExifDateTime } from "exiftool-vendored/dist/ExifDateTime.js";
+import { Logger } from "./logger.js";
 
 const ALLOWED_FILE_TYPES = ['.jpg', '.png', '.heic', '.mov', '.mp4', '.JPG', '.PNG', '.HEIC', '.MOV', '.MP4'];
 
@@ -27,8 +28,10 @@ interface FileIndexEntry {
 export class FileIndex {
   public path: string;
   private db: Database.Database;
+  private logger: Logger;
 
-  constructor(path: string) {
+  constructor(path: string, logger: Logger) {
+    this.logger = logger;
     this.path = normalize(`${path}/${dbFileName}`);
     mkdirSync(path, { recursive: true });
     this.db = new Database(this.path);
@@ -78,15 +81,19 @@ export class FileIndex {
           entry.file_mtime = entry.timestamp;
           // Metadata in old index needs to be refreshed.
           this.db.prepare('UPDATE files SET file_mtime = ?, metadata = null WHERE id = ?').run(entry.timestamp, entry.id);
+          this.logger.log(`Updated ${file.indexPath} in index: outdated entry, clearing metadata and setting file_mtime.`);
         }
 
         if (entry.file_mtime !== file.mtime) {
           this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?').run(file.mtime, entry.id);
+          this.logger.log(`Updated ${file.indexPath} in index: file mtime updated.`);
         } else if (!entry.exists) {
           this.db.prepare('UPDATE files SET "exists" = 1 WHERE id = ?').run(entry.id);
+          this.logger.log(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);
         }
       } else {
         this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)').run(file.indexPath, file.mtime, null, null, 1, 0);
+        this.logger.log(`Added ${file.indexPath} to index.`);
       }
     });
 
@@ -94,6 +101,7 @@ export class FileIndex {
     entriesMap.forEach(entry => {
       if (!filesToAddToIndex.find(file => file.indexPath === entry.path)) {
         this.db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?').run(entry.id);
+        this.logger.log(`Removed ${entry.path} from index.`);
       }
     });
   }

@@ -2,7 +2,6 @@ import { exec } from "node:child_process";
 import { promisify } from 'node:util';
 import { rename, symlink, mkdir } from "node:fs/promises";
 import { File } from "./file.js";
-import { FileIndex } from "./file-index.js";
 import path from 'node:path';
 
 const execPromise = promisify(exec);
@@ -15,7 +14,7 @@ export class ConverterError extends Error {
   }
 }
 
-export async function convertImg({ file, relocatePath }: { file: File, relocatePath?: string, fileIndex: FileIndex }) {
+export async function convertImg({ file, relocatePath }: { file: File, relocatePath?: string }) {
   await mkdir(path.dirname(file.conversionDest), { recursive: true });
 
   try {
