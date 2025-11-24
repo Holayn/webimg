@@ -27,7 +27,26 @@ interface RunContext {
 }
 
 // TODO: sizes is not used
-export async function run({ input, output, exclude = [], sizes, convertedPath, logger }: { input: string, output: string, exclude?: string[], sizes?: { name: string, height: number }[], convertedPath?: string, logger: Logger }) {
+export async function run({ 
+  input, 
+  output, 
+  exclude = [], 
+  sizes, 
+  convertedPath, 
+  logger,
+  dryRun = false 
+}: { 
+  input: string, 
+  output: string, 
+  exclude?: string[], 
+  sizes?: { name: string, height: number }[], 
+  convertedPath?: string, 
+  logger: Logger,
+  dryRun?: boolean 
+}) {
+  if (dryRun) {
+    logger.log('\n=== DRY RUN MODE ===\n');
+  }
   const tasks = new Listr<RunContext>([
     {
       title: 'Initializing',
@@ -43,7 +62,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Indexing files',
       task: async (ctx, task) => {
-        const fileIndex = new FileIndex(output, logger);
+        const fileIndex = new FileIndex(output, logger, dryRun);
         await fileIndex.update(input, exclude);
         ctx.fileIndex = fileIndex;
         ctx.files = ctx.fileIndex.getIndexedFiles()
@@ -130,7 +149,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           title: `Converting ${file.path}`,
           task: async () => {
             try {
-              await convertImg({ file, relocatePath: convertedPath });
+              if (!dryRun) {
+                await convertImg({ file, relocatePath: convertedPath });
+              }
               logger.log(`Converted ${file.path} to ${file.conversionDest}`);
               ctx.convertedFiles.push(file);
             } catch (e) {
@@ -161,7 +182,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           title: `Converting ${file.path} (${i + 1}/${filesToConvert.length})`,
           task: async () => {
             try {
-              await convertVideo({ file, relocatePath: convertedPath });
+              if (!dryRun) {
+                await convertVideo({ file, relocatePath: convertedPath });
+              }
               logger.log(`Converted ${file.path} to ${file.conversionDest}`);
               ctx.convertedFiles.push(file);
             } catch (e) {
@@ -197,7 +220,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
             title: `Resizing ${file.path} to ${size.name}`,
             task: async () => {
               try {
-                await resizeImg(file, size);
+                if (!dryRun) {
+                  await resizeImg(file, size);
+                }
                 ctx.resizedFiles.push(file);
                 logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
               } catch (e) {
@@ -235,7 +260,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
             title: `Resizing ${file.path} to ${size.name}`,
             task: async () => {
               try {
-                await resizeVideo(file, size);
+                if (!dryRun) {
+                  await resizeVideo(file, size);
+                }
                 ctx.resizedFiles.push(file);
                 logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
               } catch (e) {
@@ -273,7 +300,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
             title: `Generating video preview for ${file.path} to ${size.name}`,
             task: async () => {
               try {
-                await generateVideoPreview({ file, size });
+                if (!dryRun) {
+                  await generateVideoPreview({ file, size });
+                }
                 ctx.resizedFiles.push(file);
                 logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
               } catch (e) {
@@ -303,7 +332,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           title: `Linking ${file.path} (${i + 1}/${filesToLink.length})`,
           task: async () => {
             try {
-              await createOriginalSymlink(file);
+              if (!dryRun) {
+                await createOriginalSymlink(file);
+              }
               ctx.symlinkedFiles.push(file);
               logger.log(`Linked ${file.path} to ${file.originalDest}`);
             } catch (e) {
@@ -339,7 +370,9 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         ctx.deletedPaths = filePathsToDelete;
 
         await Promise.all(filePathsToDelete.map(async filePath => {
-          await unlink(filePath);
+          if (!dryRun) {
+            await unlink(filePath);
+          }
           logger.log(`Deleted ${filePath}`);
         }));
 
@@ -347,7 +380,12 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
           const relocatedFilePaths = await findFiles(convertedPath);
           const relocatedFilePathsToKeep = new Set(ctx.files.map(file => getConvertedRelocatedPath({ file, relocatePath: convertedPath })));
           const relocatedFilePathsToDelete = relocatedFilePaths.filter(file => !relocatedFilePathsToKeep.has(file));
-          await Promise.all(relocatedFilePathsToDelete.map(filePath => unlink(filePath)));
+          await Promise.all(relocatedFilePathsToDelete.map(async filePath => {
+            if (!dryRun) {
+              await unlink(filePath);
+            }
+            logger.log(`Deleted ${filePath}`);
+          }));
         }
       }
     },
@@ -357,7 +395,7 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
   
   // Prepare summary
   const summary = [
-    `✅ Processed ${files.length} files`,
+    `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
     `  - Converted: ${convertedFiles.length} files`,
     `  - Resized: ${resizedFiles.length} files`,
     `  - Deleted: ${deletedPaths.length} files`,

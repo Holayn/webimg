@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, existsSync, copyFileSync } from "node:fs";
 import Database from "better-sqlite3";
 import { stat } from "node:fs/promises";
 import { findFiles } from "./util.js";
@@ -30,10 +30,19 @@ export class FileIndex {
   private db: Database.Database;
   private logger: Logger;
 
-  constructor(path: string, logger: Logger) {
+  constructor(path: string, logger: Logger, dryRun: boolean = false) {
     this.logger = logger;
     this.path = normalize(`${path}/${dbFileName}`);
     mkdirSync(path, { recursive: true });
+
+    if (dryRun) {
+      if (existsSync(this.path)) {
+        const dryRunDbPath = normalize(`${path}/index-dry.db`);
+        copyFileSync(this.path, dryRunDbPath);
+        this.path = dryRunDbPath;
+      }
+    }
+
     this.db = new Database(this.path);
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS files (
