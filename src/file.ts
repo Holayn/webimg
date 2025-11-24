@@ -1,6 +1,6 @@
-import { existsSync } from "node:fs";
 import { extname, join } from "node:path";
 import { ExifData } from "./exif-extractor.js";
+import { fileExists } from "./util.js";
 
 const CONVERT_FILE_IMG_TYPES = ['.heic'];
 const CONVERT_FILE_VIDEO_TYPES = ['.mov'];
@@ -93,8 +93,8 @@ export class File {
     return extname(this.path);
   }
 
-  get isConverted() {
-    return existsSync(this.conversionDest);
+  get isConverted(): Promise<boolean> {
+    return fileExists(this.conversionDest);
   }
 
   get originalDest() {
@@ -102,7 +102,7 @@ export class File {
   }
 
   get isOriginalLinked() {
-    return existsSync(this.originalDest);
+    return fileExists(this.originalDest);
   }
 
   get isValidToProcess() {
@@ -118,8 +118,8 @@ export class File {
     return false;
   }
 
-  isResizedTo(size: string) {
-    return existsSync(join(this.output, 'media', size, this.destRelPath));
+  async isResizedTo(size: string): Promise<boolean> {
+    return fileExists(join(this.output, 'media', size, this.destRelPath));
   }
 
   getResizeDest(size: string) {
@@ -130,8 +130,8 @@ export class File {
     return this.sizes.some(s => s.name === size && (this.isVideo ? !!s.video : this.isImage ? !!s.image : false));
   }
 
-  isVideoPreviewGenerated(size: string) {
-    return existsSync(this.getVideoPreviewDest(size));
+  async isVideoPreviewGenerated(size: string): Promise<boolean> {
+    return fileExists(this.getVideoPreviewDest(size));
   }
 
   getVideoPreviewDest(size: string) {

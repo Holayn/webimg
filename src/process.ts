@@ -115,7 +115,17 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Converting photos',
       task: async (ctx, task) => {
-        const filesToConvert = ctx.files.filter(file => file.isImage && file.needsConversion && (!file.isConverted || !file.processed));
+        // First filter files that need conversion
+        const filesToConvert = [];
+        for (const file of ctx.files) {
+          if (file.isImage && file.needsConversion) {
+            const isConverted = await file.isConverted;
+            if (!isConverted || !file.processed) {
+              filesToConvert.push(file);
+            }
+          }
+        }
+        
         const subtasks = filesToConvert.map(file => ({
           title: `Converting ${file.path}`,
           task: async () => {
@@ -136,7 +146,17 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Converting videos',
       task: async (ctx, task) => {
-        const filesToConvert = ctx.files.filter(file => file.isVideo && file.needsConversion && (!file.isConverted || !file.processed));
+        // First filter files that need conversion
+        const filesToConvert = [];
+        for (const file of ctx.files) {
+          if (file.isVideo && file.needsConversion) {
+            const isConverted = await file.isConverted;
+            if (!isConverted || !file.processed) {
+              filesToConvert.push(file);
+            }
+          }
+        }
+        
         const subtasks = filesToConvert.map((file, i) => ({
           title: `Converting ${file.path} (${i + 1}/${filesToConvert.length})`,
           task: async () => {
@@ -158,25 +178,35 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
       task: async (ctx, task) => {
         const subtasks: { title: string, task: () => Promise<void> }[] = [];
         
-        ctx.files.filter(file => file.isImage).forEach(file => {
-          file.sizes.forEach(size => {
-            if (size.image && (!file.isResizedTo(size.name) || !file.processed)) {
-              subtasks.push({
-                title: `Resizing ${file.path} to ${size.name}`,
-                task: async () => {
-                  try {
-                    await resizeImg(file, size);
-                    ctx.resizedFiles.push(file);
-                    logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
-                  } catch (e) {
-                    logger.error(e);
-                    ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
-                  }
-                }
-              })
+        // First collect all resize tasks
+        const resizeTasks = [];
+        for (const file of ctx.files.filter(file => file.isImage)) {
+          for (const size of file.sizes) {
+            if (size.image) {
+              const isResized = await file.isResizedTo(size.name);
+              if (!isResized || !file.processed) {
+                resizeTasks.push({ file, size });
+              }
+            }
+          }
+        }
+
+        // Create subtasks for resizing
+        for (const { file, size } of resizeTasks) {
+          subtasks.push({
+            title: `Resizing ${file.path} to ${size.name}`,
+            task: async () => {
+              try {
+                await resizeImg(file, size);
+                ctx.resizedFiles.push(file);
+                logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+              } catch (e) {
+                logger.error(e);
+                ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
+              }
             }
           });
-        });
+        }
         
         return task.newListr(toProgressSubtasks(task, subtasks));
       }
@@ -186,25 +216,35 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
       task: async (ctx, task) => {
         const subtasks: { title: string, task: () => Promise<void> }[] = [];
         
-        ctx.files.filter(file => file.isVideo).forEach(file => {
-          file.sizes.forEach(size => {
-            if (size.video && (!file.isResizedTo(size.name) || !file.processed)) {
-              subtasks.push({
-                title: `Resizing ${file.path} to ${size.name}`,
-                task: async () => {
-                  try {
-                    await resizeVideo(file, size);
-                    ctx.resizedFiles.push(file);
-                    logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
-                  } catch (e) {
-                    logger.error(e);
-                    ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
-                  }
-                }
-              });
+        // First collect all video resize tasks
+        const videoResizeTasks = [];
+        for (const file of ctx.files.filter(file => file.isVideo)) {
+          for (const size of file.sizes) {
+            if (size.video) {
+              const isResized = await file.isResizedTo(size.name);
+              if (!isResized || !file.processed) {
+                videoResizeTasks.push({ file, size });
+              }
+            }
+          }
+        }
+
+        // Create subtasks for video resizing
+        for (const { file, size } of videoResizeTasks) {
+          subtasks.push({
+            title: `Resizing ${file.path} to ${size.name}`,
+            task: async () => {
+              try {
+                await resizeVideo(file, size);
+                ctx.resizedFiles.push(file);
+                logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+              } catch (e) {
+                logger.error(e);
+                ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
+              }
             }
           });
-        });
+        }
         
         return task.newListr(toProgressSubtasks(task, subtasks));
       }
@@ -214,25 +254,35 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
       task: async (ctx, task) => {
         const subtasks: { title: string, task: () => Promise<void> }[] = [];
         
-        ctx.files.filter(file => file.isVideo).forEach(file => {
-          file.sizes.forEach(size => {
-            if (size.image && size.videoPreview !== false && (!file.isVideoPreviewGenerated(size.name) || !file.processed)) {
-              subtasks.push({
-                title: `Generating video preview for ${file.path} to ${size.name}`,
-                task: async () => {
-                  try {
-                    await generateVideoPreview({ file, size });
-                    ctx.resizedFiles.push(file);
-                    logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
-                  } catch (e) {
-                    logger.error(e);
-                    ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
-                  }
-                }
-              })
+        // First collect all video preview generation tasks
+        const videoPreviewTasks = [];
+        for (const file of ctx.files.filter(file => file.isVideo)) {
+          for (const size of file.sizes) {
+            if (size.image && size.videoPreview !== false) {
+              const isPreviewGenerated = await file.isVideoPreviewGenerated(size.name);
+              if (!isPreviewGenerated || !file.processed) {
+                videoPreviewTasks.push({ file, size });
+              }
+            }
+          }
+        }
+
+        // Create subtasks for video preview generation
+        for (const { file, size } of videoPreviewTasks) {
+          subtasks.push({
+            title: `Generating video preview for ${file.path} to ${size.name}`,
+            task: async () => {
+              try {
+                await generateVideoPreview({ file, size });
+                ctx.resizedFiles.push(file);
+                logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
+              } catch (e) {
+                logger.error(e);
+                ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
+              }
             }
           });
-        });
+        }
 
         return task.newListr(toProgressSubtasks(task, subtasks));
       }
@@ -240,7 +290,15 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
     {
       title: 'Creating symlinks to originals',
       task: async (ctx, task) => {
-        const filesToLink = ctx.files.filter(file => !file.isOriginalLinked);
+        // First check which files need symlinks
+        const filesToLink = [];
+        for (const file of ctx.files) {
+          const isLinked = await file.isOriginalLinked;
+          if (!isLinked) {
+            filesToLink.push(file);
+          }
+        }
+
         const subtasks = filesToLink.map((file, i) => ({
           title: `Linking ${file.path} (${i + 1}/${filesToLink.length})`,
           task: async () => {
