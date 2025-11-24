@@ -81,6 +81,14 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
       },
     },
     {
+      title: 'Filtering files',
+      task: async (ctx, task) => {
+        ctx.files = ctx.files.filter(file => file.isValidToProcess);
+        const invalidFiles = ctx.files.filter(file => !file.isValidToProcess);
+        ctx.fileIndex.removeProcessed(invalidFiles.map(file => file.indexId));
+      }
+    },
+    {
       title: 'Setting HDR flag on video files',
       task: async (ctx, task) => {
         const files = ctx.files.filter(file => file.isVideo && file.metadata?.WebImg?.HDR === undefined);
@@ -102,14 +110,6 @@ export async function run({ input, output, exclude = [], sizes, convertedPath, l
         }));
 
         return task.newListr(toProgressSubtasks(task, subtasks));
-      }
-    },
-    {
-      title: 'Filtering files',
-      task: async (ctx, task) => {
-        ctx.files = ctx.files.filter(file => file.isValidToProcess);
-        const invalidFiles = ctx.files.filter(file => !file.isValidToProcess);
-        ctx.fileIndex.removeProcessed(invalidFiles.map(file => file.indexId));
       }
     },
     {
