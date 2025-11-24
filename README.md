@@ -5,13 +5,13 @@ A tool to convert and resize images and videos for web use.
 ## Usage
 
 ```bash
-webimg --input <input> --output <output>
+npm run start -- --input <input> --output <output>
 ```
 
 Or
 
 ```bash
-webimg --config <config>
+npm run start -- --config <config>
 ```
 
 ### Options
@@ -24,3 +24,4 @@ webimg --config <config>
 | `--relocateConverted <relocateConverted>` | Absolute path to the directory for relocating converted files to |
 | `--exclude <exclude>` | Array of relative paths of files to exclude |
 | `--sizes <sizes>` | Sizes to resize images to |
+| `--dryRun` | Run in dry run mode |
