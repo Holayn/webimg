@@ -84,6 +84,11 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
 });
 
+process.on('SIGINT', () => {
+  logger.log('Received SIGINT. Exiting...');
+  process.exit(0);
+});
+
 await run({
   input,
   output,
