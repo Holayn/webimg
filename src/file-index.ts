@@ -37,10 +37,10 @@ export class FileIndex {
 
     if (dryRun) {
       const dryRunDbPath = normalize(`${path}/index-dry.db`);
-      this.path = dryRunDbPath;
       if (existsSync(this.path)) {
         copyFileSync(this.path, dryRunDbPath);
       }
+      this.path = dryRunDbPath;
     }
 
     this.db = new Database(this.path);
