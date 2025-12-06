@@ -36,10 +36,10 @@ export class FileIndex {
     mkdirSync(path, { recursive: true });
 
     if (dryRun) {
+      const dryRunDbPath = normalize(`${path}/index-dry.db`);
+      this.path = dryRunDbPath;
       if (existsSync(this.path)) {
-        const dryRunDbPath = normalize(`${path}/index-dry.db`);
         copyFileSync(this.path, dryRunDbPath);
-        this.path = dryRunDbPath;
       }
     }
 
