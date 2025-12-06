@@ -153,7 +153,6 @@ export async function run({
     {
       title: 'Converting photos',
       task: async (ctx, task) => {
-        // First filter files that need conversion
         const filesToConvert = [];
         for (const file of ctx.files) {
           if (file.isImage && file.needsConversion) {
@@ -193,7 +192,6 @@ export async function run({
     {
       title: 'Converting videos',
       task: async (ctx, task) => {
-        // First filter files that need conversion
         const filesToConvert = [];
         for (const file of ctx.files) {
           if (file.isVideo && file.needsConversion) {
@@ -437,7 +435,6 @@ export async function run({
 
   const { problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart } = await tasks.run();
   
-  // Prepare summary
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
     `  - Converted: ${convertedFiles.length} files`,
@@ -446,7 +443,6 @@ export async function run({
     `  - Time: ${((Date.now() - timeStart) / 1000).toFixed(2)} seconds`,
   ];
 
-  // Add problem files if any
   if (problemFiles.length > 0) {
     summary.push(
       `\n❌ Encountered issues with ${problemFiles.length} files:`,
