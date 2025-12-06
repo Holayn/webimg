@@ -1,4 +1,4 @@
-import { Listr, ListrRenderer, ListrTaskWrapper, SimpleRenderer } from 'listr2';
+import { Listr, ListrTaskWrapper, DefaultRenderer, SimpleRenderer } from 'listr2';
 import { FileIndex } from './file-index.js';
 import { convertImg, convertVideo, getConvertedRelocatedPath } from './converter.js';
 import { unlink } from 'node:fs/promises';
@@ -25,6 +25,10 @@ interface RunContext {
   deletedPaths: string[];
   timeStart: number;
 }
+
+const commonRendererOptions = {
+  exitOnError: false,
+};
 
 // TODO: sizes is not used
 export async function run({ 
@@ -90,7 +94,7 @@ export async function run({
           }
         }));
         
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -128,7 +132,7 @@ export async function run({
           }
         }));
 
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -161,7 +165,7 @@ export async function run({
           }
         }));
 
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       },
     },
     {
@@ -193,7 +197,7 @@ export async function run({
             }
           }
         }));
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       },
     },
     {
@@ -233,7 +237,7 @@ export async function run({
           });
         }
         
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -273,7 +277,7 @@ export async function run({
           });
         }
         
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -313,7 +317,7 @@ export async function run({
           });
         }
 
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -343,7 +347,7 @@ export async function run({
             }
           }
         }));
-        return task.newListr(toProgressSubtasks(task, subtasks));
+        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
       }
     },
     {
@@ -389,7 +393,7 @@ export async function run({
         }
       }
     },
-  ]);
+  ], commonRendererOptions);
 
   const { problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart } = await tasks.run();
   
@@ -413,7 +417,7 @@ export async function run({
   logger.log(`\n${summary.join('\n')}\n`);
 }
 
-function toProgressSubtasks(task: ListrTaskWrapper<RunContext, typeof ListrRenderer, typeof SimpleRenderer>, subtasks: { title: string, task: () => Promise<void> }[]) {
+function toProgressSubtasks(task: ListrTaskWrapper<RunContext, typeof DefaultRenderer, typeof SimpleRenderer>, subtasks: { title: string, task: () => Promise<void> }[]) {
   const originalTaskTitle = task.title;
 
   let done = 0;
@@ -423,7 +427,11 @@ function toProgressSubtasks(task: ListrTaskWrapper<RunContext, typeof ListrRende
     task: async () => {
       await subtask.task();
       done++;
-      task.title = `${originalTaskTitle} (${done}/${total})`;
+      task.title = `${originalTaskTitle} (${done}/${total}): [${subtask.title}]`;
+
+      if (done === total) {
+        task.title = `${originalTaskTitle} (total tasks: ${total})`;
+      }
     },
   }));
 }
