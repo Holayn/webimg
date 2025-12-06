@@ -31,25 +31,25 @@ const commonRendererOptions = {
 };
 
 // TODO: sizes is not used
-export async function run({ 
-  input, 
-  output, 
-  exclude = [], 
-  sizes, 
-  convertedPath, 
+export async function run({
+  input,
+  output,
+  exclude = [],
+  sizes,
+  convertedPath,
   logger,
-  dryRun = false 
-}: { 
-  input: string, 
-  output: string, 
-  exclude?: string[], 
-  sizes?: { name: string, height: number }[], 
-  convertedPath?: string, 
+  dryRun = false
+}: {
+  input: string,
+  output: string,
+  exclude?: string[],
+  sizes?: { name: string, height: number }[],
+  convertedPath?: string,
   logger: Logger,
-  dryRun?: boolean 
+  dryRun?: boolean
 }) {
   if (dryRun) {
-    logger.log('\n=== DRY RUN MODE ===\n');
+    logger.log('=== DRY RUN MODE ===');
   }
   const tasks = new Listr<RunContext>([
     {
@@ -77,24 +77,32 @@ export async function run({
     {
       title: 'Extracting EXIF data',
       task: async (ctx, task) => {
-        const subtasks = ctx.files.filter(file => !file.metadata).map(file => ({
-          title: `Extracting EXIF data for ${file.path}`,
-          task: async () => {
-            try {
-              const exif = await extractExif({ file });
-              const metadata = new FileMetadata();
-              metadata.setFromExif(exif);
-              file.metadata = metadata;
-              ctx.fileIndex.updateMetadataField(file);
-              ctx.fileIndex.updateDateField(file, exif);
-            } catch (e) {
-              logger.error(e);
-              ctx.problemFiles.push({ file, task: 'EXIF data extraction' });
-            }
+        const filesToExtract = ctx.files.filter(file => !file.metadata);
+        const totalFiles = filesToExtract.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalFiles}`;
+
+        for (let i = 0; i < totalFiles; i++) {
+          const file = filesToExtract[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalFiles} - Processing ${file.path}`;
+
+          try {
+            const exif = await extractExif({ file });
+            const metadata = new FileMetadata();
+            metadata.setFromExif(exif);
+            file.metadata = metadata;
+            ctx.fileIndex.updateMetadataField(file);
+            ctx.fileIndex.updateDateField(file, exif);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: 'EXIF data extraction' });
           }
-        }));
-        
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        }
+
+        task.title = `${originalTitle} (${totalFiles} files)`;
       }
     },
     {
@@ -114,25 +122,32 @@ export async function run({
     {
       title: 'Setting HDR flag on video files',
       task: async (ctx, task) => {
-        const files = ctx.files.filter(file => file.isVideo && file.metadata?.WebImg?.HDR === undefined);
-        const subtasks = files.map(file => ({
-          title: `Setting HDR flag for ${file.path}`,
-          task: async () => {
-            try {
-              const hdr = await determineHDR(file);
-              if (!file.metadata) {
-                file.metadata = new FileMetadata();
-              }
-              file.metadata.WebImg.HDR = hdr;
-              ctx.fileIndex.updateMetadataField(file);
-            } catch (e) {
-              logger.error(e);
-              ctx.problemFiles.push({ file, task: 'HDR flag setting' });
-            }
-          }
-        }));
+        const filesToProcess = ctx.files.filter(file => file.isVideo && file.metadata?.WebImg?.HDR === undefined);
+        const totalFiles = filesToProcess.length;
+        const originalTitle = task.title;
 
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        task.title = `${originalTitle}: 0/${totalFiles}`;
+
+        for (let i = 0; i < totalFiles; i++) {
+          const file = filesToProcess[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalFiles} - Processing ${file.path}`;
+
+          try {
+            const hdr = await determineHDR(file);
+            if (!file.metadata) {
+              file.metadata = new FileMetadata();
+            }
+            file.metadata.WebImg.HDR = hdr;
+            ctx.fileIndex.updateMetadataField(file);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: 'HDR flag setting' });
+          }
+        }
+
+        task.title = `${originalTitle} (${totalFiles} files)`;
       }
     },
     {
@@ -148,24 +163,31 @@ export async function run({
             }
           }
         }
-        
-        const subtasks = filesToConvert.map(file => ({
-          title: `Converting ${file.path}`,
-          task: async () => {
-            try {
-              if (!dryRun) {
-                await convertImg({ file, relocatePath: convertedPath });
-              }
-              logger.log(`Converted ${file.path} to ${file.conversionDest}`);
-              ctx.convertedFiles.push(file);
-            } catch (e) {
-              logger.error(e);
-              ctx.problemFiles.push({ file, task: 'Image conversion' });
-            }
-          }
-        }));
 
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        const totalFiles = filesToConvert.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalFiles}`;
+
+        for (let i = 0; i < totalFiles; i++) {
+          const file = filesToConvert[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalFiles} - Converting ${file.path}`;
+
+          try {
+            if (!dryRun) {
+              await convertImg({ file, relocatePath: convertedPath });
+            }
+            logger.log(`Converted ${file.path} to ${file.conversionDest}`);
+            ctx.convertedFiles.push(file);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: 'Image conversion' });
+          }
+        }
+
+        task.title = `${originalTitle} (${totalFiles} files)`;
       },
     },
     {
@@ -181,31 +203,36 @@ export async function run({
             }
           }
         }
-        
-        const subtasks = filesToConvert.map((file, i) => ({
-          title: `Converting ${file.path} (${i + 1}/${filesToConvert.length})`,
-          task: async () => {
-            try {
-              if (!dryRun) {
-                await convertVideo({ file, relocatePath: convertedPath });
-              }
-              logger.log(`Converted ${file.path} to ${file.conversionDest}`);
-              ctx.convertedFiles.push(file);
-            } catch (e) {
-              logger.error(e);
-              ctx.problemFiles.push({ file, task: 'Video conversion' });
+
+        const totalFiles = filesToConvert.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalFiles}`;
+
+        for (let i = 0; i < totalFiles; i++) {
+          const file = filesToConvert[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalFiles} - Converting ${file.path}`;
+
+          try {
+            if (!dryRun) {
+              await convertVideo({ file, relocatePath: convertedPath });
             }
+            logger.log(`Converted ${file.path} to ${file.conversionDest}`);
+            ctx.convertedFiles.push(file);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: 'Video conversion' });
           }
-        }));
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        }
+
+        task.title = `${originalTitle} (${totalFiles} files)`;
       },
     },
     {
       title: 'Resizing images',
       task: async (ctx, task) => {
-        const subtasks: { title: string, task: () => Promise<void> }[] = [];
-        
-        // First collect all resize tasks
         const resizeTasks = [];
         for (const file of ctx.files.filter(file => file.isImage)) {
           for (const size of file.sizes) {
@@ -218,34 +245,35 @@ export async function run({
           }
         }
 
-        // Create subtasks for resizing
-        for (const { file, size } of resizeTasks) {
-          subtasks.push({
-            title: `Resizing ${file.path} to ${size.name}`,
-            task: async () => {
-              try {
-                if (!dryRun) {
-                  await resizeImg(file, size);
-                }
-                ctx.resizedFiles.push(file);
-                logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
-              } catch (e) {
-                logger.error(e);
-                ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
-              }
+        const totalTasks = resizeTasks.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalTasks}`;
+
+        for (let i = 0; i < totalTasks; i++) {
+          const { file, size } = resizeTasks[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalTasks} - Resizing ${file.path} to ${size.name}`;
+
+          try {
+            if (!dryRun) {
+              await resizeImg(file, size);
             }
-          });
+            ctx.resizedFiles.push(file);
+            logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
+          }
         }
-        
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+
+        task.title = `${originalTitle} (${totalTasks} tasks)`;
       }
     },
     {
       title: 'Resizing videos',
       task: async (ctx, task) => {
-        const subtasks: { title: string, task: () => Promise<void> }[] = [];
-        
-        // First collect all video resize tasks
         const videoResizeTasks = [];
         for (const file of ctx.files.filter(file => file.isVideo)) {
           for (const size of file.sizes) {
@@ -258,34 +286,35 @@ export async function run({
           }
         }
 
-        // Create subtasks for video resizing
-        for (const { file, size } of videoResizeTasks) {
-          subtasks.push({
-            title: `Resizing ${file.path} to ${size.name}`,
-            task: async () => {
-              try {
-                if (!dryRun) {
-                  await resizeVideo(file, size);
-                }
-                ctx.resizedFiles.push(file);
-                logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
-              } catch (e) {
-                logger.error(e);
-                ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
-              }
+        const totalTasks = videoResizeTasks.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalTasks}`;
+
+        for (let i = 0; i < totalTasks; i++) {
+          const { file, size } = videoResizeTasks[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalTasks} - Resizing ${file.path} to ${size.name}`;
+
+          try {
+            if (!dryRun) {
+              await resizeVideo(file, size);
             }
-          });
+            ctx.resizedFiles.push(file);
+            logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
+          }
         }
-        
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+
+        task.title = `${originalTitle} (${totalTasks} tasks)`;
       }
     },
     {
       title: 'Generating video previews',
       task: async (ctx, task) => {
-        const subtasks: { title: string, task: () => Promise<void> }[] = [];
-        
-        // First collect all video preview generation tasks
         const videoPreviewTasks = [];
         for (const file of ctx.files.filter(file => file.isVideo)) {
           for (const size of file.sizes) {
@@ -298,32 +327,35 @@ export async function run({
           }
         }
 
-        // Create subtasks for video preview generation
-        for (const { file, size } of videoPreviewTasks) {
-          subtasks.push({
-            title: `Generating video preview for ${file.path} to ${size.name}`,
-            task: async () => {
-              try {
-                if (!dryRun) {
-                  await generateVideoPreview({ file, size });
-                }
-                ctx.resizedFiles.push(file);
-                logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
-              } catch (e) {
-                logger.error(e);
-                ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
-              }
+        const totalTasks = videoPreviewTasks.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalTasks}`;
+
+        for (let i = 0; i < totalTasks; i++) {
+          const { file, size } = videoPreviewTasks[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalTasks} - Generating preview for ${file.path} to ${size.name}`;
+
+          try {
+            if (!dryRun) {
+              await generateVideoPreview({ file, size });
             }
-          });
+            ctx.resizedFiles.push(file);
+            logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
+          }
         }
 
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        task.title = `${originalTitle} (${totalTasks} tasks)`;
       }
     },
     {
       title: 'Creating symlinks to originals',
       task: async (ctx, task) => {
-        // First check which files need symlinks
         const filesToLink = [];
         for (const file of ctx.files) {
           const isLinked = await file.isOriginalLinked;
@@ -332,22 +364,30 @@ export async function run({
           }
         }
 
-        const subtasks = filesToLink.map((file, i) => ({
-          title: `Linking ${file.path} (${i + 1}/${filesToLink.length})`,
-          task: async () => {
-            try {
-              if (!dryRun) {
-                await createOriginalSymlink(file);
-              }
-              ctx.symlinkedFiles.push(file);
-              logger.log(`Linked ${file.path} to ${file.originalDest}`);
-            } catch (e) {
-              logger.error(e);
-              ctx.problemFiles.push({ file, task: 'Original symlink creation' });
+        const totalFiles = filesToLink.length;
+        const originalTitle = task.title;
+
+        task.title = `${originalTitle}: 0/${totalFiles}`;
+
+        for (let i = 0; i < totalFiles; i++) {
+          const file = filesToLink[i];
+          const current = i + 1;
+
+          task.title = `${originalTitle}: ${current}/${totalFiles} - Linking ${file.path}`;
+
+          try {
+            if (!dryRun) {
+              await createOriginalSymlink(file);
             }
+            ctx.symlinkedFiles.push(file);
+            logger.log(`Linked ${file.path} to ${file.originalDest}`);
+          } catch (e) {
+            logger.error(e);
+            ctx.problemFiles.push({ file, task: 'Original symlink creation' });
           }
-        }));
-        return task.newListr(toProgressSubtasks(task, subtasks), commonRendererOptions);
+        }
+
+        task.title = `${originalTitle} (${totalFiles} files)`;
       }
     },
     {
@@ -415,23 +455,4 @@ export async function run({
   }
 
   logger.log(`\n${summary.join('\n')}\n`);
-}
-
-function toProgressSubtasks(task: ListrTaskWrapper<RunContext, typeof DefaultRenderer, typeof SimpleRenderer>, subtasks: { title: string, task: () => Promise<void> }[]) {
-  const originalTaskTitle = task.title;
-
-  let done = 0;
-  let total = subtasks.length;
-  return subtasks.map(subtask => ({
-    title: subtask.title,
-    task: async () => {
-      await subtask.task();
-      done++;
-      task.title = `${originalTaskTitle} (${done}/${total}): [${subtask.title}]`;
-
-      if (done === total) {
-        task.title = `${originalTaskTitle} (total tasks: ${total})`;
-      }
-    },
-  }));
 }
