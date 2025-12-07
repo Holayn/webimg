@@ -191,6 +191,11 @@ export class FileMetadata {
       this.EXIF = data.EXIF || {};
       this.Composite = data.Composite || {};
       this.WebImg = data.WebImg || {};
+
+      // Handle differently-named live photo tag.
+      if (data.QuickTime?.['Live-photoAuto']) {
+        this.QuickTime.LivePhotoAuto = data.QuickTime['Live-photoAuto'];
+      }
     }
   }
 

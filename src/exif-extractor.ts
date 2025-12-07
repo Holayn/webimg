@@ -7,7 +7,7 @@ export interface ExifData extends Tags {
 
 export async function extractExif({ file }: { file: File }) {
   const tags = await exiftool.read(file.path);
-  Object.assign(tags, { LivePhotoAuto: tags['LivePhotoAuto' as keyof typeof tags] === 1 });
+  Object.assign(tags, { LivePhotoAuto: tags['LivePhotoAuto' as keyof typeof tags] === 1 || tags['Live-photoAuto' as keyof typeof tags] === 1 });
   return tags as ExifData;
 }
 
