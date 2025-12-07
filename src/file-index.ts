@@ -8,7 +8,11 @@ import { ExifData } from "./exif-extractor.js";
 import { ExifDateTime } from "exiftool-vendored/dist/ExifDateTime.js";
 import { Logger } from "./logger.js";
 
-const ALLOWED_FILE_TYPES = ['.jpg', '.png', '.heic', '.mov', '.mp4', '.JPG', '.PNG', '.HEIC', '.MOV', '.MP4'];
+const ALLOWED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.heic', '.mov', '.mp4'].reduce((acc, val) => {
+  acc.push(val.toLowerCase());
+  acc.push(val.toUpperCase());
+  return acc;
+}, [] as string[]);
 
 const dbFileName = 'index.db';
 
