@@ -40,7 +40,10 @@ export class Logger {
       level: 'info',
       format: logFormat,
       transports: [
-        new winston.transports.Console(),
+        new winston.transports.Console({
+          handleExceptions: true, 
+          handleRejections: true,
+        }),
         fileTransport,
       ]
     });
