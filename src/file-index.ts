@@ -1,29 +1,21 @@
 import { mkdirSync, existsSync, copyFileSync } from "node:fs";
 import Database from "better-sqlite3";
-import { stat } from "node:fs/promises";
 import { findFiles } from "./util.js";
 import { File, ALLOWED_IMG_TYPES, ALLOWED_VIDEO_TYPES } from "./file.js";
-import { relative, normalize } from "node:path";
+import { dirname, normalize, join } from "node:path";
+import { fileURLToPath } from 'node:url';
 import { ExifData } from "./exif-extractor.js";
 import { ExifDateTime } from "exiftool-vendored/dist/ExifDateTime.js";
 import { Logger } from "./logger.js";
+import { FileIndexEntry } from "./types.js";
+import { Worker } from "node:worker_threads";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const ALLOWED_FILE_TYPES = [...ALLOWED_IMG_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 const dbFileName = 'index.db';
-
-interface FileIndexEntry {
-  id: number;
-  path: string;
-  file_mtime: number;
-  date: number;
-  metadata: Buffer | null;
-  exists: number;
-  processed: number;
-
-  // Handle deprecated field
-  file_date?: number;
-}
 
 export class FileIndex {
   public path: string;
@@ -72,67 +64,48 @@ export class FileIndex {
       exclude,
     });
 
-    const filesToAddToIndex = await Promise.all(filePaths
-      .map(async filePath => {
-        const stats = await stat(filePath);
-        return { path: filePath, relpath: relative(input, filePath), indexPath: relative(input, filePath).replaceAll('\\', '/'), mtime: stats.mtime.getTime() };
-      })
-    );
-
     const entries = this.getIndexedFiles();
-    const entriesMap = new Map(entries.map(entry => [entry.path, entry]));
 
-    // Return a promise that resolves when the transaction is complete
+    // Convert to an array of [key, value] pairs to pass to the worker
+    const entriesMapArray = Array.from(new Map(entries.map(entry => [entry.path, entry])).entries());
+
     return new Promise((resolve, reject) => {
-      // Use setImmediate to run the transaction in the next tick
-      setImmediate(() => {
-        try {
-          const transaction = this.db.transaction(() => {
-            const updateStmt = {
-              fileMtime: this.db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?'),
-              fileMtimeAndProcessed: this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?'),
-              setExists: this.db.prepare('UPDATE files SET "exists" = ? WHERE id = ?'),
-              insert: this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)'),
-              setExistsAndProcessed: this.db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
-            };
+      const worker = new Worker(join(__dirname, 'file-index-worker.js'), {
+        workerData: {
+          dbPath: this.path,
+          input,
+          filePaths,
+          entriesMapArray,
+        }
+      });
 
-            // Update existing files
-            filesToAddToIndex.forEach(file => {
-              const entry = entriesMap.get(file.indexPath);
-              if (entry) {
-                if (entry.file_date && !entry.file_mtime) {
-                  entry.file_mtime = entry.file_date;
-                  updateStmt.fileMtime.run(entry.file_date, entry.id);
-                  this.logger.log(`Updated ${file.indexPath} in index: entry missing file_mtime, setting it...`);
-                }
+      worker.on('message', (result) => {
+        switch (result.type) {
+          case 'log':
+            this.logger.log(result.message);
+            break;
+            
+          case 'complete':
+            resolve();
+            break;
+            
+          case 'error':
+            this.logger.error(`Worker failed with error: ${result.message}`);
+            reject(new Error(result.message));
+            break;
+            
+          default:
+            this.logger.log(`Received unknown message type from worker: ${result.type}`);
+        }
+      });
 
-                if (entry.file_mtime !== file.mtime) {
-                  updateStmt.fileMtimeAndProcessed.run(file.mtime, entry.id);
-                  this.logger.log(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);
-                } else if (!entry.exists) {
-                  updateStmt.setExists.run(1, entry.id);
-                  this.logger.log(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);
-                }
-              } else {
-                updateStmt.insert.run(file.indexPath, file.mtime, null, null, 1, 0);
-                this.logger.log(`Added ${file.indexPath} to index.`);
-              }
-            });
+      worker.on('error', (err) => {
+        reject(err);
+      });
 
-            // Update files that no longer exist
-            entriesMap.forEach(entry => {
-              if (!filesToAddToIndex.find(file => file.indexPath === entry.path)) {
-                updateStmt.setExistsAndProcessed.run(entry.id);
-                this.logger.log(`Removed ${entry.path} from index.`);
-              }
-            });
-          });
-
-          // Execute the transaction
-          transaction();
-          resolve();
-        } catch (error) {
-          reject(error);
+      worker.on('exit', (code) => {
+        if (code !== 0) {
+          reject(new Error(`Worker stopped with exit code ${code}.`));
         }
       });
     });
