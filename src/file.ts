@@ -25,6 +25,7 @@ export const DEFAULT_SIZES: FileResizeSize[] = [
   { 
     name: 'large',
     image: { height: 1440 },
+    video: { symlink: true },
     videoPreview: false,
   },
   {
@@ -40,7 +41,7 @@ export const DEFAULT_SIZES: FileResizeSize[] = [
 export type FileResizeSize = {
   name: string,
   image?: { height: number },
-  video?: { height: number },
+  video?: { height?: number; symlink?: boolean; },
   videoPreview?: boolean,
 }
 

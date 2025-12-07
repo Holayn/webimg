@@ -34,10 +34,10 @@ export async function resizeVideo(file: File, size: FileResizeSize) {
   const dest = file.getResizeDest(size.name);
 
   await mkdir(path.dirname(dest), { recursive: true });
-
-  if (size.video?.height) {
-    throw new ResizerError(`Currently unable to resize videos.`);
-  } else {
+  
+  if (size.video?.symlink) {
     await symlink(file.needsConversion ? file.conversionDest : file.path, dest);
+  } else {
+    throw new ResizerError(`Currently unable to resize videos.`);
   }
 }
