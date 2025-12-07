@@ -2,17 +2,13 @@ import { mkdirSync, existsSync, copyFileSync } from "node:fs";
 import Database from "better-sqlite3";
 import { stat } from "node:fs/promises";
 import { findFiles } from "./util.js";
-import { File } from "./file.js";
+import { File, ALLOWED_IMG_TYPES, ALLOWED_VIDEO_TYPES } from "./file.js";
 import { relative, normalize } from "node:path";
 import { ExifData } from "./exif-extractor.js";
 import { ExifDateTime } from "exiftool-vendored/dist/ExifDateTime.js";
 import { Logger } from "./logger.js";
 
-const ALLOWED_FILE_TYPES = ['.jpg', '.jpeg', '.png', '.heic', '.mov', '.mp4'].reduce((acc, val) => {
-  acc.push(val.toLowerCase());
-  acc.push(val.toUpperCase());
-  return acc;
-}, [] as string[]);
+const ALLOWED_FILE_TYPES = [...ALLOWED_IMG_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 const dbFileName = 'index.db';
 

@@ -10,6 +10,17 @@ const CONVERTED_EXTENSION_VIDEO = '.mp4';
 const VIDEO_PREVIEW_EXTENSION_COMPRESSED = '.jpg';
 const VIDEO_PREVIEW_EXTENSION = '.png';
 
+export const ALLOWED_IMG_TYPES = ['.jpg', '.jpeg', '.png', '.heic'].reduce((acc, val) => {
+  acc.push(val.toLowerCase());
+  acc.push(val.toUpperCase());
+  return acc;
+}, [] as string[]);
+export const ALLOWED_VIDEO_TYPES = ['.mov', '.mp4'].reduce((acc, val) => {
+  acc.push(val.toLowerCase());
+  acc.push(val.toUpperCase());
+  return acc;
+}, [] as string[]);
+
 export const DEFAULT_SIZES: FileResizeSize[] = [
   { 
     name: 'large',
@@ -61,11 +72,11 @@ export class File {
   }
 
   get isVideo() {
-    return ['.mov', '.mp4'].includes(extname(this.path).toLowerCase());
+    return ALLOWED_VIDEO_TYPES.includes(extname(this.path).toLowerCase());
   }
 
   get isImage() {
-    return ['.jpg', '.png', '.heic'].includes(extname(this.path).toLowerCase());
+    return ALLOWED_IMG_TYPES.includes(extname(this.path).toLowerCase());
   }
 
   get needsConversion() {
