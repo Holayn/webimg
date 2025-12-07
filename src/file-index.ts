@@ -82,35 +82,59 @@ export class FileIndex {
     const entries = this.getIndexedFiles();
     const entriesMap = new Map(entries.map(entry => [entry.path, entry]));
 
-    // Update existing files
-    filesToAddToIndex.forEach(file => {
-      const entry = entriesMap.get(file.indexPath);
-      if (entry) {
-        if (entry.file_date && !entry.file_mtime) {
-          entry.file_mtime = entry.file_date;
-          this.db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?').run(entry.file_date, entry.id);
-          this.logger.log(`Updated ${file.indexPath} in index: entry missing file_mtime, setting it...`);
-        }
+    // Return a promise that resolves when the transaction is complete
+    return new Promise((resolve, reject) => {
+      // Use setImmediate to run the transaction in the next tick
+      setImmediate(() => {
+        try {
+          const transaction = this.db.transaction(() => {
+            const updateStmt = {
+              fileMtime: this.db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?'),
+              fileMtimeAndProcessed: this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?'),
+              setExists: this.db.prepare('UPDATE files SET "exists" = ? WHERE id = ?'),
+              insert: this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)'),
+              setExistsAndProcessed: this.db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
+            };
 
-        if (entry.file_mtime !== file.mtime) {
-          this.db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?').run(file.mtime, entry.id);
-          this.logger.log(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);
-        } else if (!entry.exists) {
-          this.db.prepare('UPDATE files SET "exists" = 1 WHERE id = ?').run(entry.id);
-          this.logger.log(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);
-        }
-      } else {
-        this.db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)').run(file.indexPath, file.mtime, null, null, 1, 0);
-        this.logger.log(`Added ${file.indexPath} to index.`);
-      }
-    });
+            // Update existing files
+            filesToAddToIndex.forEach(file => {
+              const entry = entriesMap.get(file.indexPath);
+              if (entry) {
+                if (entry.file_date && !entry.file_mtime) {
+                  entry.file_mtime = entry.file_date;
+                  updateStmt.fileMtime.run(entry.file_date, entry.id);
+                  this.logger.log(`Updated ${file.indexPath} in index: entry missing file_mtime, setting it...`);
+                }
 
-    // Update files that no longer exist
-    entriesMap.forEach(entry => {
-      if (!filesToAddToIndex.find(file => file.indexPath === entry.path)) {
-        this.db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?').run(entry.id);
-        this.logger.log(`Removed ${entry.path} from index.`);
-      }
+                if (entry.file_mtime !== file.mtime) {
+                  updateStmt.fileMtimeAndProcessed.run(file.mtime, entry.id);
+                  this.logger.log(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);
+                } else if (!entry.exists) {
+                  updateStmt.setExists.run(1, entry.id);
+                  this.logger.log(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);
+                }
+              } else {
+                updateStmt.insert.run(file.indexPath, file.mtime, null, null, 1, 0);
+                this.logger.log(`Added ${file.indexPath} to index.`);
+              }
+            });
+
+            // Update files that no longer exist
+            entriesMap.forEach(entry => {
+              if (!filesToAddToIndex.find(file => file.indexPath === entry.path)) {
+                updateStmt.setExistsAndProcessed.run(entry.id);
+                this.logger.log(`Removed ${entry.path} from index.`);
+              }
+            });
+          });
+
+          // Execute the transaction
+          transaction();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
     });
   }
 
