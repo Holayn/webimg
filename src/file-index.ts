@@ -22,7 +22,7 @@ interface FileIndexEntry {
   processed: number;
 
   // Handle deprecated field
-  timestamp?: number;
+  file_date?: number;
 }
 
 export class FileIndex {
@@ -86,11 +86,10 @@ export class FileIndex {
     filesToAddToIndex.forEach(file => {
       const entry = entriesMap.get(file.indexPath);
       if (entry) {
-        if (entry.timestamp && !entry.file_mtime) {
-          entry.file_mtime = entry.timestamp;
-          // Metadata in old index needs to be refreshed.
-          this.db.prepare('UPDATE files SET file_mtime = ?, metadata = null WHERE id = ?').run(entry.timestamp, entry.id);
-          this.logger.log(`Updated ${file.indexPath} in index: outdated entry, clearing metadata and setting file_mtime.`);
+        if (entry.file_date && !entry.file_mtime) {
+          entry.file_mtime = entry.file_date;
+          this.db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?').run(entry.file_date, entry.id);
+          this.logger.log(`Updated ${file.indexPath} in index: entry missing file_mtime, setting it...`);
         }
 
         if (entry.file_mtime !== file.mtime) {
