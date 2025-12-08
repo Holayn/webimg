@@ -1,8 +1,9 @@
 import { exec } from "node:child_process";
 import { promisify } from 'node:util';
-import { rename, symlink, mkdir, unlink } from "node:fs/promises";
+import { rename, symlink, mkdir, unlink, stat } from "node:fs/promises";
 import { File } from "./file.js";
 import path from 'node:path';
+import { fileExists } from './util.js';
 
 const execPromise = promisify(exec);
 
@@ -18,7 +19,10 @@ export async function convertImg({ file, relocatePath }: { file: File, relocateP
   await mkdir(path.dirname(file.conversionDest), { recursive: true });
 
   try {
-    await unlink(file.conversionDest);
+    if (await fileExists(file.conversionDest)) {
+      await unlink(file.conversionDest);  
+    }
+    
     await execPromise(`magick "${file.path}" "${file.conversionDest}"`);
   } catch (e) {
     throw new ConverterError('Failed to convert image', e);
@@ -33,7 +37,9 @@ export async function convertVideo({ file, relocatePath }: { file: File, relocat
   await mkdir(path.dirname(file.conversionDest), { recursive: true });
 
   try {
-    await unlink(file.conversionDest);
+    if (await fileExists(file.conversionDest)) {
+      await unlink(file.conversionDest);  
+    }
     await execPromise(`ffmpeg -i "${file.path}" "${file.conversionDest}"`);
   } catch (e) {
     throw new ConverterError('Failed to convert video', e);

@@ -1,7 +1,8 @@
 import sharp from 'sharp';
 import { File, FileResizeSize } from './file.js';
 import path from 'node:path';
-import { mkdir, symlink } from 'node:fs/promises';
+import { mkdir, symlink, unlink } from 'node:fs/promises';
+import { fileExists } from './util.js';
 
 export class ResizerError extends Error {
   constructor(message: string, cause?: unknown) {
@@ -36,6 +37,10 @@ export async function resizeVideo(file: File, size: FileResizeSize) {
   await mkdir(path.dirname(dest), { recursive: true });
   
   if (size.video?.symlink) {
+    if (await fileExists(dest)) {
+      await unlink(dest);
+    }
+    
     await symlink(file.needsConversion ? file.conversionDest : file.path, dest);
   } else {
     throw new ResizerError(`Currently unable to resize videos.`);
