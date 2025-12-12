@@ -9,7 +9,7 @@ import { extractExif, done as doneExtractExif } from './exif-extractor.js';
 import { findFiles } from './util.js';
 import { Logger } from './logger.js';
 import { determineHDR } from './determine-hdr.js';
-import path from 'node:path';
+import { join, normalize } from 'node:path';
 import { createOriginalSymlink } from './original-symlinker.js';
 
 interface RunContext {
@@ -71,7 +71,7 @@ export async function run({
         ctx.fileIndex = fileIndex;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
-          .map(file => new File({ path: path.join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
+          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
       },
     },
     {
@@ -398,14 +398,14 @@ export async function run({
     {
       title: 'Cleaning up output files',
       task: async (ctx, task) => {
-        const outputFiles = await findFiles(path.join(output, 'media'));
+        const outputFiles = (await findFiles(join(output, 'media'))).map(f => normalize(f));
         const filesToKeep = new Set([
           ...ctx.files.flatMap(file => [
             file.conversionDest,
             ...file.sizes.filter(s => file.canResizeTo(s.name)).map(size => file.getResizeDest(size.name)),
             ...(file.isVideo ? file.sizes.filter(s => s.videoPreview !== false).map(size => file.getVideoPreviewDest(size.name)) : []),
             file.originalDest,
-          ].filter(file => file !== null))
+          ].filter(file => file !== null).map(f => normalize(f)))
         ]);
 
         const filePathsToDelete = outputFiles.filter(file => !filesToKeep.has(file));
