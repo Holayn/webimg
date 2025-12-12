@@ -135,11 +135,12 @@ export async function run({
           task.title = `${originalTitle}: ${current}/${totalFiles} - Processing ${file.path}`;
 
           try {
-            const hdr = await determineHDR(file);
+            // const hdr = await determineHDR(file);
             if (!file.metadata) {
               file.metadata = new FileMetadata();
             }
-            file.metadata.WebImg.HDR = hdr;
+            // file.metadata.WebImg.HDR = hdr;
+            file.metadata.WebImg.HDR = true;
             ctx.fileIndex.updateMetadataField(file);
           } catch (e) {
             logger.error(e);
@@ -422,6 +423,9 @@ export async function run({
           const relocatedFilePaths = await findFiles(convertedPath);
           const relocatedFilePathsToKeep = new Set(ctx.files.map(file => getConvertedRelocatedPath({ file, relocatePath: convertedPath })));
           const relocatedFilePathsToDelete = relocatedFilePaths.filter(file => !relocatedFilePathsToKeep.has(file));
+          logger.log(relocatedFilePaths);
+          logger.log('===');
+          logger.log(Array.from(relocatedFilePathsToKeep));
           await Promise.all(relocatedFilePathsToDelete.map(async filePath => {
             if (!dryRun) {
               await unlink(filePath);
