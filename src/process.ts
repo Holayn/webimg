@@ -398,14 +398,14 @@ export async function run({
     {
       title: 'Cleaning up output files',
       task: async (ctx, task) => {
-        const outputFiles = (await findFiles(join(output, 'media'))).map(f => normalize(f));
+        const outputFiles = await findFiles(join(output, 'media'));
         const filesToKeep = new Set([
           ...ctx.files.flatMap(file => [
             file.conversionDest,
             ...file.sizes.filter(s => file.canResizeTo(s.name)).map(size => file.getResizeDest(size.name)),
             ...(file.isVideo ? file.sizes.filter(s => s.videoPreview !== false).map(size => file.getVideoPreviewDest(size.name)) : []),
             file.originalDest,
-          ].filter(file => file !== null).map(f => normalize(f)))
+          ].filter(file => file !== null))
         ]);
 
         const filePathsToDelete = outputFiles.filter(file => !filesToKeep.has(file));
