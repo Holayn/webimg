@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/execa": "^2.0.2",
     "better-sqlite3": "^12.4.1",
+    "execa": "^9.6.1",
     "exiftool-vendored": "^31.1.0",
     "globby": "^15.0.0",
     "listr2": "^9.0.4",
