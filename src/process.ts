@@ -423,9 +423,6 @@ export async function run({
           const relocatedFilePaths = await findFiles(convertedPath);
           const relocatedFilePathsToKeep = new Set(ctx.files.map(file => getConvertedRelocatedPath({ file, relocatePath: convertedPath })));
           const relocatedFilePathsToDelete = relocatedFilePaths.filter(file => !relocatedFilePathsToKeep.has(file));
-          logger.log(relocatedFilePaths);
-          logger.log('===');
-          logger.log(Array.from(relocatedFilePathsToKeep));
           await Promise.all(relocatedFilePathsToDelete.map(async filePath => {
             if (!dryRun) {
               await unlink(filePath);

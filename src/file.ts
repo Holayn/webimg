@@ -91,8 +91,12 @@ export class File {
   }
 
   get conversionDest() {
+    return join(this.output, this.conversionDestRel);
+  }
+
+  get conversionDestRel() {
     const newPath = this.relpath + '__' + this.convertedFileExt;
-    return join(this.output, 'media', 'converted', newPath);
+    return join('media', 'converted', newPath);
   }
 
   get convertedFileExt() {
@@ -106,7 +110,7 @@ export class File {
   }
 
   get isConverted(): Promise<boolean> {
-    return fileExists(this.conversionDest);
+    return fileExists(this.conversionDest, { followSymlink: true });
   }
 
   get originalDest() {

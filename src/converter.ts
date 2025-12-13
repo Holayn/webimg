@@ -66,5 +66,5 @@ async function relocateConverted({ file, relocatePath }: { file: File, relocateP
 }
 
 export function getConvertedRelocatedPath({ file, relocatePath }: { file: File, relocatePath: string }) {
-  return path.join(relocatePath, file.destRelPath);
+  return path.join(relocatePath, file.conversionDestRel);
 }

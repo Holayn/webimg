@@ -1,6 +1,6 @@
 import { globby } from 'globby';
 import { normalize } from 'node:path';
-import { stat } from 'node:fs/promises';
+import { lstat, stat } from 'node:fs/promises';
 
 export interface FindFilesOptions {
   include?: string[];
@@ -26,9 +26,16 @@ export async function findFiles(
     return globby(include, globbyOptions).then(files => files.map(file => normalize(file)));
   }
 
-export async function fileExists(filePath: string): Promise<boolean> {
+export async function fileExists(filePath: string, { followSymlink = false }: { followSymlink?: boolean } = {}): Promise<boolean> {
   try {
-    await stat(filePath);
+    if (followSymlink) {
+      await Promise.all([
+        await lstat(filePath),
+        await stat(filePath),
+      ]);
+    } else {
+      await lstat(filePath);
+    }
     return true;
   } catch (error: any) {
     if (error.code === 'ENOENT') {
