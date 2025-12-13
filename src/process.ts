@@ -100,6 +100,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'EXIF data extraction' });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalFiles} files)`;
@@ -146,6 +148,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'HDR flag setting' });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalFiles} files)`;
@@ -185,6 +189,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'Image conversion' });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalFiles} files)`;
@@ -224,6 +230,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'Video conversion' });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalFiles} files)`;
@@ -265,6 +273,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalTasks} tasks)`;
@@ -306,6 +316,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalTasks} tasks)`;
@@ -347,6 +359,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalTasks} tasks)`;
@@ -384,6 +398,8 @@ export async function run({
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'Original symlink creation' });
           }
+
+          await new Promise(resolve => setImmediate(resolve));
         }
 
         task.title = `${originalTitle} (${totalFiles} files)`;
