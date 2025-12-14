@@ -58,7 +58,7 @@ export class FileIndex {
     } catch (e) {}
   }
 
-  async update(input: string, exclude?: string[]): Promise<void> {
+  async update(input: string, exclude?: string[]): Promise<{ added: number; updated: number; removed: number }> {
     const filePaths = await findFiles(input, {
       include: ALLOWED_FILE_TYPES.map(type => `**/*${type}`),
       exclude,
@@ -86,7 +86,12 @@ export class FileIndex {
             break;
             
           case 'complete':
-            resolve();
+            const message = result.message as { added: number; updated: number; removed: number };
+            resolve({
+              added: message.added,
+              updated: message.updated,
+              removed: message.removed,
+            });
             break;
             
           case 'error':

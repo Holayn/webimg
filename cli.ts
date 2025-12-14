@@ -17,10 +17,6 @@ interface Arguments {
   relocateConverted?: string;
   exclude?: string[];
   dryRun?: boolean;
-  sizes?: {
-    name: string;
-    height: number;
-  }[];
 }
 
 const argv = yargs(hideBin(process.argv))
@@ -43,10 +39,6 @@ const argv = yargs(hideBin(process.argv))
   .option('relocateConverted', {
     describe: 'Path to the directory holding converted files',
     type: 'string',
-  })
-  .option('sizes', {
-    describe: 'Sizes to resize images to',
-    type: 'array',
   })
   .option('dry-run', {
     describe: 'Run without making any changes',
@@ -95,7 +87,6 @@ await run({
   output,
   exclude: argv.exclude,
   convertedPath: argv.relocateConverted ? normalize(path.resolve(__dirname, argv.relocateConverted)) : undefined,
-  sizes: argv.sizes,
   logger,
   dryRun: argv.dryRun,
 });

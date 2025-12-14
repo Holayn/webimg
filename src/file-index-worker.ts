@@ -27,7 +27,13 @@ try {
     fileMtimeAndProcessed: db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?'),
     setExists: db.prepare('UPDATE files SET "exists" = ? WHERE id = ?'),
     insert: db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)'),
-    setExistsAndProcessed: db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
+    updateAsRemoved: db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
+  };
+
+  const result = {
+    added: 0,
+    updated: 0,
+    removed: 0,
   };
 
   const transaction = db.transaction(() => {
@@ -45,15 +51,18 @@ try {
 
         if (entry.file_mtime !== file.mtime) {
           updateStmt.fileMtimeAndProcessed.run(file.mtime, entry.id);
+          result.updated++;
           sendLog(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);
         } else if (!entry.exists) {
           updateStmt.setExists.run(1, entry.id);
+          result.updated++;
           sendLog(`Updated ${file.indexPath} in index: file added back, setting exists to true.`);
         }
         // Remove from map to track which entries are left (files that no longer exist)
         entriesMap.delete(file.indexPath); 
       } else {
         updateStmt.insert.run(file.indexPath, file.mtime, null, null, 1, 0);
+        result.added++;
         sendLog(`Added ${file.indexPath} to index.`);
       }
     });
@@ -61,7 +70,8 @@ try {
     // 2. Update files that no longer exist (Remaining entries in entriesMap)
     entriesMap.forEach(entry => {
       if (entry.exists) {
-        updateStmt.setExistsAndProcessed.run(entry.id);
+        updateStmt.updateAsRemoved.run(entry.id);
+        result.removed++;
         sendLog(`Removed ${entry.path} from index.`);
       }
     });
@@ -70,7 +80,7 @@ try {
   transaction();
   db.close();
 
-  parentPort?.postMessage({ type: 'complete' });
+  parentPort?.postMessage({ type: 'complete', message: result });
 } catch (error: any) {
   parentPort?.postMessage({ type: 'error', message: error.message });
 }

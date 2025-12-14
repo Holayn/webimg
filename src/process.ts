@@ -15,6 +15,7 @@ import { createOriginalSymlink } from './original-symlinker.js';
 interface RunContext {
   fileIndex: FileIndex;
   files: File[];
+  indexUpdateResult: { added: number; updated: number; removed: number } | null;
   problemFiles: {
     file: File;
     task: string;
@@ -30,12 +31,10 @@ const commonRendererOptions = {
   exitOnError: false,
 };
 
-// TODO: sizes is not used
 export async function run({
   input,
   output,
   exclude = [],
-  sizes,
   convertedPath,
   logger,
   dryRun = false
@@ -54,8 +53,9 @@ export async function run({
   const tasks = new Listr<RunContext>([
     {
       title: 'Initializing',
-      task: async (ctx, task) => {
+      task: async (ctx) => {
         ctx.files = [];
+        ctx.indexUpdateResult = null;
         ctx.problemFiles = [];
         ctx.resizedFiles = [];
         ctx.convertedFiles = [];
@@ -65,10 +65,11 @@ export async function run({
     },
     {
       title: 'Indexing files',
-      task: async (ctx, task) => {
+      task: async (ctx) => {
         const fileIndex = new FileIndex(output, logger, dryRun);
-        await fileIndex.update(input, exclude);
+        const indexUpdateResult = await fileIndex.update(input, exclude);
         ctx.fileIndex = fileIndex;
+        ctx.indexUpdateResult = indexUpdateResult;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
           .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
@@ -109,13 +110,13 @@ export async function run({
     },
     {
       title: 'Cleaning up EXIF extractor',
-      task: async (ctx, task) => {
+      task: async () => {
         doneExtractExif();
       },
     },
     {
       title: 'Filtering files',
-      task: async (ctx, task) => {
+      task: async (ctx) => {
         ctx.files = ctx.files.filter(file => file.isValidToProcess);
         const invalidFiles = ctx.files.filter(file => !file.isValidToProcess);
         ctx.fileIndex.removeProcessed(invalidFiles.map(file => file.indexId));
@@ -407,14 +408,14 @@ export async function run({
     },
     {
       title: 'Updating processed files in index',
-      task: async (ctx, task) => {
+      task: async (ctx) => {
         ctx.fileIndex.updateAsProcessed(ctx.files.map(file => file.indexId));
         ctx.files.forEach(file => file.processed = true);
       }
     },
     {
       title: 'Cleaning up output files',
-      task: async (ctx, task) => {
+      task: async (ctx) => {
         const outputFiles = await findFiles(join(output, 'media'));
         const filesToKeep = new Set([
           ...ctx.files.flatMap(file => [
@@ -450,10 +451,11 @@ export async function run({
     },
   ], commonRendererOptions);
 
-  const { problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart } = await tasks.run();
+  const { indexUpdateResult, problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart } = await tasks.run();
   
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
+    `  - Index: added ${indexUpdateResult?.added} files, updated ${indexUpdateResult?.updated} files, removed ${indexUpdateResult?.removed} files`,
     `  - Converted: ${convertedFiles.length} files`,
     `  - Resized: ${resizedFiles.length} files`,
     `  - Deleted: ${deletedPaths.length} files`,
