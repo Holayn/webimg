@@ -23,6 +23,7 @@ const logFormat = winston.format.combine(
 
 export class Logger {
   private logger: winston.Logger;
+  private fileTransport: typeof winston.transports.File;
 
   constructor(logPath: string) {
     const normalizedPath = path.normalize(logPath);
@@ -35,6 +36,7 @@ export class Logger {
     }).on('error', (error) => {
       console.error('Error writing to log file:', error);
     });
+    this.fileTransport = fileTransport;
 
     this.logger = winston.createLogger({
       level: 'info',
@@ -63,6 +65,18 @@ export class Logger {
   }
 
   async done() {
+    // Manually end the file transport first and wait for its 'finish' event.
+    // This forces it to flush its buffer and close the file stream.
+    await new Promise<void>((resolve, reject) => {
+      this.fileTransport.on('error', reject);
+      this.fileTransport.on('finish', () => {
+        this.fileTransport.removeListener('error', reject);
+        resolve();
+      });
+      // Call end() on the transport to start the flush/close process
+      this.fileTransport.end();
+    });
+
     return new Promise<void>((resolve, reject) => {
       // Listen for errors during shutdown
       const errorListener = (err: Error) => {
