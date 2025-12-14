@@ -77,11 +77,12 @@ const logger = new Logger(output);
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
-  process.exit(1);
+  shutdown();
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', { promise, reason });
+  shutdown();
 });
 
 process.on('SIGINT', () => {
@@ -100,3 +101,16 @@ await run({
 });
 
 await logger.done();
+
+
+
+async function shutdown() {
+    // Ensure all logs have been written.
+    try {
+        await logger.done();
+    } catch (logError) {
+        console.error('Error during logger shutdown:', logError);
+    }
+    
+    process.exit(1);
+}
