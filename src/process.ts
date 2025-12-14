@@ -1,4 +1,4 @@
-import { Listr, ListrTaskWrapper, DefaultRenderer, SimpleRenderer } from 'listr2';
+import { Listr } from 'listr2';
 import { FileIndex } from './file-index.js';
 import { convertImg, convertVideo, getConvertedRelocatedPath } from './converter.js';
 import { unlink } from 'node:fs/promises';
@@ -183,7 +183,7 @@ export async function run({
             if (!dryRun) {
               await convertImg({ file, relocatePath: convertedPath });
             }
-            logger.log(`Converted ${file.path} to ${file.conversionDest}`);
+            logger.debug(`Converted ${file.path} to ${file.conversionDest}`);
             ctx.convertedFiles.push(file);
           } catch (e) {
             logger.error(e);
@@ -224,7 +224,7 @@ export async function run({
             if (!dryRun) {
               await convertVideo({ file, relocatePath: convertedPath });
             }
-            logger.log(`Converted ${file.path} to ${file.conversionDest}`);
+            logger.debug(`Converted ${file.path} to ${file.conversionDest}`);
             ctx.convertedFiles.push(file);
           } catch (e) {
             logger.error(e);
@@ -268,7 +268,7 @@ export async function run({
               await resizeImg(file, size);
             }
             ctx.resizedFiles.push(file);
-            logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+            logger.debug(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
           } catch (e) {
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Image resizing to ${size.name}` });
@@ -311,7 +311,7 @@ export async function run({
               await resizeVideo(file, size);
             }
             ctx.resizedFiles.push(file);
-            logger.log(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
+            logger.debug(`Resized ${file.path} to ${file.getResizeDest(size.name)}`);
           } catch (e) {
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Video resizing to ${size.name}` });
@@ -354,7 +354,7 @@ export async function run({
               await generateVideoPreview({ file, size });
             }
             ctx.resizedFiles.push(file);
-            logger.log(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
+            logger.debug(`Generated video preview for ${file.path} to ${file.getVideoPreviewDest(size.name)}`);
           } catch (e) {
             logger.error(e);
             ctx.problemFiles.push({ file, task: `Video preview generation to ${size.name}` });
@@ -393,7 +393,7 @@ export async function run({
               await createOriginalSymlink(file);
             }
             ctx.symlinkedFiles.push(file);
-            logger.log(`Linked ${file.path} to ${file.originalDest}`);
+            logger.debug(`Linked ${file.path} to ${file.originalDest}`);
           } catch (e) {
             logger.error(e);
             ctx.problemFiles.push({ file, task: 'Original symlink creation' });
@@ -432,7 +432,7 @@ export async function run({
           if (!dryRun) {
             await unlink(filePath);
           }
-          logger.log(`Deleted ${filePath}`);
+          logger.debug(`Deleted ${filePath}`);
         }));
 
         if (convertedPath) {
@@ -443,7 +443,7 @@ export async function run({
             if (!dryRun) {
               await unlink(filePath);
             }
-            logger.log(`Deleted ${filePath}`);
+            logger.debug(`Deleted ${filePath}`);
           }));
         }
       }

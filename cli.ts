@@ -100,6 +100,7 @@ await run({
   dryRun: argv.dryRun,
 });
 
+// Allow logs to flush.
 await new Promise(resolve => setTimeout(resolve, 1000));
 
 shutdown(0);

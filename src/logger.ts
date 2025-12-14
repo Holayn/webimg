@@ -23,7 +23,7 @@ const logFormat = winston.format.combine(
 
 export class Logger {
   private logger: winston.Logger;
-  private fileTransport: typeof winston.transports.File;
+  private closed: boolean = false;
 
   constructor(logPath: string) {
     const normalizedPath = path.normalize(logPath);
@@ -36,23 +36,56 @@ export class Logger {
     }).on('error', (error) => {
       console.error('Error writing to log file:', error);
     });
-    this.fileTransport = fileTransport;
+
+    const debugFileTransport = new winston.transports.File({
+      dirname: normalizedPath,
+      filename: path.join('webimg-debug.log'),
+      level: 'debug',
+      format: winston.format((info) => {
+        // Only include 'debug' logs in this file
+        if (info.level === 'debug') {
+          return info;
+        }
+        return false; // Exclude all other levels
+      })(),
+    }).on('error', (error) => {
+      console.error('Error writing to debug log file:', error);
+    });
 
     this.logger = winston.createLogger({
-      level: 'info',
+      level: 'debug',
       format: logFormat,
       transports: [
-        new winston.transports.Console(),
+        new winston.transports.Console({
+          level: 'info',
+        }),
         fileTransport,
+        debugFileTransport,
       ]
     });
   }
 
   log(message: any, meta?: any) {
+    if (this.closed) {
+      return;
+    }
+
     this.logger.info(message, meta);
   }
 
+  debug(message: any, meta?: any) {
+    if (this.closed) {
+      return;
+    }
+    
+    this.logger.debug(message, meta);
+  }
+
   error(message: any, meta?: any) {
+    if (this.closed) {
+      console.error(message);
+    }
+
     if (message instanceof Error) {
       // If message is an Error, pass its string `message` as the main message
       // and pass the original Error object inside the meta object.
@@ -65,8 +98,9 @@ export class Logger {
   }
 
   async done() {
+    this.closed = true;
+    
     return new Promise<void>((resolve, reject) => {
-      // Listen for errors during shutdown
       const errorListener = (err: Error) => {
         reject(err);
       };

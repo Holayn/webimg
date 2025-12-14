@@ -82,7 +82,7 @@ export class FileIndex {
       worker.on('message', (result) => {
         switch (result.type) {
           case 'log':
-            this.logger.log(result.message);
+            this.logger.debug(result.message);
             break;
             
           case 'complete':
@@ -95,7 +95,7 @@ export class FileIndex {
             break;
             
           default:
-            this.logger.log(`Received unknown message type from worker: ${result.type}`);
+            this.logger.debug(`Received unknown message type from worker: ${result.type}`);
         }
       });
 
