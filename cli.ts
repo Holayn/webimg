@@ -104,5 +104,5 @@ async function shutdown(code: number) {
     console.error('Error during logger shutdown:', logError);
   }
 
-  process.exit(1);
+  process.exit(code);
 }
