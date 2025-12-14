@@ -77,12 +77,12 @@ const logger = new Logger(output);
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  shutdown();
+  shutdown(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', { promise, reason });
-  shutdown();
+  shutdown(1);
 });
 
 process.on('SIGINT', () => {
@@ -100,11 +100,11 @@ await run({
   dryRun: argv.dryRun,
 });
 
-await logger.done();
+await new Promise(resolve => setTimeout(resolve, 1000));
 
+shutdown(0);
 
-
-async function shutdown() {
+async function shutdown(code: number) {
   // Ensure all logs have been written.
   try {
     await logger.done();

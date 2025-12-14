@@ -65,18 +65,6 @@ export class Logger {
   }
 
   async done() {
-    // Manually end the file transport first and wait for its 'finish' event.
-    // This forces it to flush its buffer and close the file stream.
-    await new Promise<void>((resolve, reject) => {
-      this.fileTransport.on('error', reject);
-      this.fileTransport.on('finish', () => {
-        this.fileTransport.removeListener('error', reject);
-        resolve();
-      });
-      // Call end() on the transport to start the flush/close process
-      this.fileTransport.end();
-    });
-
     return new Promise<void>((resolve, reject) => {
       // Listen for errors during shutdown
       const errorListener = (err: Error) => {
