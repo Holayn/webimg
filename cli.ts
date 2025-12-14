@@ -61,10 +61,10 @@ const argv = yargs(hideBin(process.argv))
     if (!argv.output) {
       throw new Error('Missing required argument: output. Provide --output or use a config file.');
     }
-    
+
     return true;
   })
-  
+
   .help()
   .alias('help', 'h')
   .parseSync() as Arguments;
@@ -76,17 +76,17 @@ const logger = new Logger(output);
 
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error);
   shutdown();
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', { promise, reason });
+  console.error('Unhandled Rejection at:', { promise, reason });
   shutdown();
 });
 
 process.on('SIGINT', () => {
-  logger.log('Received SIGINT. Exiting...');
+  console.log('Received SIGINT. Exiting...');
   process.exit(0);
 });
 
@@ -105,12 +105,12 @@ await logger.done();
 
 
 async function shutdown() {
-    // Ensure all logs have been written.
-    try {
-        await logger.done();
-    } catch (logError) {
-        console.error('Error during logger shutdown:', logError);
-    }
-    
-    process.exit(1);
+  // Ensure all logs have been written.
+  try {
+    await logger.done();
+  } catch (logError) {
+    console.error('Error during logger shutdown:', logError);
+  }
+
+  process.exit(1);
 }

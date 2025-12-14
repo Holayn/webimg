@@ -68,10 +68,10 @@ export class Logger {
       const errorListener = (err: Error) => {
         reject(err);
       };
-      this.logger.once('error', errorListener);
+      this.logger.on('error', errorListener);
 
       // Listen for successful finish
-      this.logger.once('finish', () => {
+      this.logger.on('finish', () => {
         this.logger.removeListener('error', errorListener); // Clean up listener
         resolve();
       });
