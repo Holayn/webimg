@@ -9,7 +9,7 @@ import { extractExif, done as doneExtractExif } from './exif-extractor.js';
 import { findFiles } from './util.js';
 import { Logger } from './logger.js';
 import { determineHDR } from './determine-hdr.js';
-import { join, normalize } from 'node:path';
+import { join } from 'node:path';
 import { createOriginalSymlink } from './original-symlinker.js';
 
 interface RunContext {
@@ -138,12 +138,11 @@ export async function run({
           task.title = `${originalTitle}: ${current}/${totalFiles} - Processing ${file.path}`;
 
           try {
-            // const hdr = await determineHDR(file);
+            const hdr = await determineHDR(file);
             if (!file.metadata) {
               file.metadata = new FileMetadata();
             }
-            // file.metadata.WebImg.HDR = hdr;
-            file.metadata.WebImg.HDR = true;
+            file.metadata.WebImg.HDR = hdr;
             ctx.fileIndex.updateMetadataField(file);
           } catch (e) {
             logger.error(e);
