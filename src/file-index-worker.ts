@@ -61,7 +61,7 @@ try {
         // Remove from map to track which entries are left (files that no longer exist)
         entriesMap.delete(file.indexPath); 
       } else {
-        updateStmt.insert.run(file.indexPath, basename(file.relpath), file.mtime, null, null, 1, 0);
+        updateStmt.insert.run(file.indexPath, basename(file.relpath), file.mtime, 0, null, 1, 0);
         result.added++;
         sendLog(`Added ${file.indexPath} to index.`);
       }
