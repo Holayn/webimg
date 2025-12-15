@@ -1,6 +1,6 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { stat } from "node:fs/promises";
-import { relative } from "node:path";
+import { relative, basename } from "node:path";
 import Database from 'better-sqlite3';
 import { FileIndexEntry } from './types.js';
 
@@ -26,7 +26,7 @@ try {
     fileMtime: db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?'),
     fileMtimeAndProcessed: db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?'),
     setExists: db.prepare('UPDATE files SET "exists" = ? WHERE id = ?'),
-    insert: db.prepare('INSERT INTO files (path, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?)'),
+    insert: db.prepare('INSERT INTO files (path, file_name, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     updateAsRemoved: db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
   };
 
@@ -61,7 +61,7 @@ try {
         // Remove from map to track which entries are left (files that no longer exist)
         entriesMap.delete(file.indexPath); 
       } else {
-        updateStmt.insert.run(file.indexPath, file.mtime, null, null, 1, 0);
+        updateStmt.insert.run(file.indexPath, basename(file.relpath), file.mtime, null, null, 1, 0);
         result.added++;
         sendLog(`Added ${file.indexPath} to index.`);
       }

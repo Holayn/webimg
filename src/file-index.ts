@@ -41,6 +41,7 @@ export class FileIndex {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         path TEXT NOT NULL,
         file_mtime INTEGER NOT NULL, 
+        file_name TEXT NOT NULL,
         date INTEGER,
         metadata BLOB, 
         "exists" INTEGER NOT NULL DEFAULT 1,

@@ -454,7 +454,7 @@ export async function run({
   
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
-    `  - Index: added ${indexUpdateResult?.added} files, updated ${indexUpdateResult?.updated} files, removed ${indexUpdateResult?.removed} files`,
+    `  - Index: added ${indexUpdateResult?.added ?? 0} files, updated ${indexUpdateResult?.updated ?? 0} files, removed ${indexUpdateResult?.removed ?? 0} files`,
     `  - Converted: ${convertedFiles.length} files`,
     `  - Resized: ${resizedFiles.length} files`,
     `  - Deleted: ${deletedPaths.length} files`,
