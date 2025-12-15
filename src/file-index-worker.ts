@@ -23,10 +23,10 @@ try {
   const db = new Database(dbPath);
   
   const updateStmt = {
-    fileMtime: db.prepare('UPDATE files SET file_mtime = ? WHERE id = ?'),
-    fileMtimeAndProcessed: db.prepare('UPDATE files SET file_mtime = ?, processed = 0 WHERE id = ?'),
+    fileMtime: db.prepare('UPDATE files SET file_date = ? WHERE id = ?'),
+    fileMtimeAndProcessed: db.prepare('UPDATE files SET file_date = ?, processed = 0 WHERE id = ?'),
     setExists: db.prepare('UPDATE files SET "exists" = ? WHERE id = ?'),
-    insert: db.prepare('INSERT INTO files (path, file_name, file_mtime, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+    insert: db.prepare('INSERT INTO files (path, file_name, file_date, date, metadata, "exists", processed) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     updateAsRemoved: db.prepare('UPDATE files SET "exists" = 0, processed = 0 WHERE id = ?')
   };
 
@@ -43,13 +43,13 @@ try {
       
       if (entry) {
         // Handle deprecated file_date field logic
-        if (entry.file_date && !entry.file_mtime) {
-          entry.file_mtime = entry.file_date;
+        if (entry.file_date && !entry.file_date) {
+          entry.file_date = entry.file_date;
           updateStmt.fileMtime.run(entry.file_date, entry.id);
-          sendLog(`Updated ${file.indexPath} in index: entry missing file_mtime, setting it...`);
+          sendLog(`Updated ${file.indexPath} in index: entry missing file_date, setting it...`);
         }
 
-        if (entry.file_mtime !== file.mtime) {
+        if (entry.file_date !== file.mtime) {
           updateStmt.fileMtimeAndProcessed.run(file.mtime, entry.id);
           result.updated++;
           sendLog(`Updated ${file.indexPath} in index: file mtime updated, setting processed to false.`);

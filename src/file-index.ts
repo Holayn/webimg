@@ -40,7 +40,7 @@ export class FileIndex {
       CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         path TEXT NOT NULL,
-        file_mtime INTEGER NOT NULL, 
+        file_date INTEGER NOT NULL, 
         file_name TEXT NOT NULL,
         date INTEGER,
         metadata BLOB, 
@@ -52,10 +52,6 @@ export class FileIndex {
     try {
       // Handle old indexes that don't have "exists" column.
       this.db.prepare('ALTER TABLE files ADD COLUMN "exists" INTEGER NOT NULL DEFAULT 1').run();
-    } catch (e) {}
-    try {
-      // Handle old indexes that don't have "file_mtime" column.
-      this.db.prepare('ALTER TABLE files ADD COLUMN file_mtime INTEGER NOT NULL DEFAULT 0').run();
     } catch (e) {}
   }
 

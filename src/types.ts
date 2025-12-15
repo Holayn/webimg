@@ -1,12 +1,9 @@
 export interface FileIndexEntry {
   id: number;
   path: string;
-  file_mtime: number;
+  file_date: number;
   date: number;
   metadata: Buffer | null;
   exists: number;
   processed: number;
-
-  // Handle deprecated field
-  file_date?: number;
 }
