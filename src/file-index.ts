@@ -42,7 +42,7 @@ export class FileIndex {
         path TEXT NOT NULL,
         file_date INTEGER NOT NULL, 
         file_name TEXT NOT NULL,
-        date INTEGER,
+        date INTEGER NOT NULL,
         metadata BLOB, 
         "exists" INTEGER NOT NULL DEFAULT 1,
         processed INTEGER
@@ -92,7 +92,7 @@ export class FileIndex {
             break;
             
           case 'error':
-            this.logger.error(result.message);
+            this.logger.error(result.message.message, { stack: result.message.stack });
             reject(new Error(result.message));
             break;
             
