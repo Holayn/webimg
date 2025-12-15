@@ -92,7 +92,7 @@ export class FileIndex {
             break;
             
           case 'error':
-            this.logger.error(`Worker failed with error: ${result.message}`);
+            this.logger.error(result.message);
             reject(new Error(result.message));
             break;
             

@@ -82,5 +82,5 @@ try {
 
   parentPort?.postMessage({ type: 'complete', message: result });
 } catch (error: any) {
-  parentPort?.postMessage({ type: 'error', message: error.message });
+  parentPort?.postMessage({ type: 'error', message: error });
 }
