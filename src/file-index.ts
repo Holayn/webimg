@@ -43,7 +43,7 @@ export class FileIndex {
         file_date INTEGER NOT NULL, 
         file_name TEXT NOT NULL,
         date INTEGER NOT NULL,
-        metadata BLOB, 
+        metadata BLOB NOT NULL, 
         "exists" INTEGER NOT NULL DEFAULT 1,
         processed INTEGER
       );
