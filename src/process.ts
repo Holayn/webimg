@@ -117,9 +117,9 @@ export async function run({
     {
       title: 'Filtering files',
       task: async (ctx) => {
-        ctx.files = ctx.files.filter(file => file.isValidToProcess);
         const invalidFiles = ctx.files.filter(file => !file.isValidToProcess);
         ctx.fileIndex.removeProcessed(invalidFiles.map(file => file.indexId));
+        ctx.files = ctx.files.filter(file => file.isValidToProcess);
       }
     },
     {
