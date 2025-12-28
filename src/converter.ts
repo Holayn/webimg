@@ -37,7 +37,20 @@ export async function convertVideo({ file, relocatePath }: { file: File, relocat
     if (await fileExists(file.conversionDest)) {
       await unlink(file.conversionDest);  
     }
-    await execa('ffmpeg', ['-i', file.path, file.conversionDest]);
+    await execa('ffmpeg', [
+      '-y',
+      '-i', file.path, 
+      '-c:v', 'libx264', 
+      '-c:a', 'aac',
+      '-b:a', '192k',
+      '-profile:v', 'main', // Forces a highly compatible H.264 version
+      '-level', '4.0', // Sets a standard compatibility level
+      '-vf', 'scale=iw:-2,format=yuv420p', 
+      '-crf', '23', 
+      '-preset', 'slow',
+      '-movflags', '+faststart',
+      file.conversionDest
+    ]);
   } catch (e) {
     throw new ConverterError('Failed to convert video', e);
   }
