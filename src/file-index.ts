@@ -122,8 +122,13 @@ export class FileIndex {
   }
 
   updateDateField(file: File, exif: ExifData) {
-    const date = (exif.DateTimeOriginal || exif.ModifyDate || exif.CreationDate || exif.CreateDate || exif.DateCreated) as ExifDateTime;
+    const date = (exif.DateTimeOriginal || exif.CreationDate || exif.CreateDate) as ExifDateTime;
     
+    if (!date || !(date instanceof ExifDateTime)) {
+      this.logger.log(`${file.path} is missing date info.`);
+      return;
+    }
+
     this.db.prepare('UPDATE files SET date = ? WHERE id = ?').run(date?.toMillis() || 0, file.indexId);
   }
 
