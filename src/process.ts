@@ -72,7 +72,7 @@ export async function run({
         ctx.indexUpdateResult = indexUpdateResult;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
-          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
+          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
       },
     },
     {
