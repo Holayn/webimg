@@ -36,6 +36,7 @@ export class FileIndex {
     }
 
     this.db = new Database(this.path);
+    this.db.pragma('journal_mode = WAL');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +54,10 @@ export class FileIndex {
       // Handle old indexes that don't have "exists" column.
       this.db.prepare('ALTER TABLE files ADD COLUMN "exists" INTEGER NOT NULL DEFAULT 1').run();
     } catch (e) {}
+  }
+
+  close() {
+    this.db.close();
   }
 
   async update(input: string, exclude?: string[]): Promise<{ added: number; updated: number; removed: number }> {

@@ -450,7 +450,7 @@ export async function run({
     },
   ], commonRendererOptions);
 
-  const { indexUpdateResult, problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart } = await tasks.run();
+  const { indexUpdateResult, problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart, fileIndex } = await tasks.run();
   
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
@@ -469,4 +469,6 @@ export async function run({
   }
 
   logger.log(`\n${summary.join('\n')}\n`);
+
+  fileIndex.close();
 }
