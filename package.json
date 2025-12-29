@@ -13,9 +13,11 @@
   "license": "ISC",
   "dependencies": {
     "@types/execa": "^2.0.2",
+    "@types/fs-extra": "^11.0.4",
     "better-sqlite3": "^12.4.1",
     "execa": "^9.6.1",
     "exiftool-vendored": "^31.1.0",
+    "fs-extra": "^11.3.3",
     "globby": "^15.0.0",
     "listr2": "^9.0.4",
     "sharp": "^0.34.4",

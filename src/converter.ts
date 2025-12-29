@@ -3,6 +3,7 @@ import { rename, symlink, mkdir, unlink } from "node:fs/promises";
 import { File } from "./file.js";
 import path from 'node:path';
 import { fileExists } from './util.js';
+import { move } from 'fs-extra';
 
 export class ConverterError extends Error {
   constructor(message: string, cause?: unknown) {
@@ -64,7 +65,7 @@ async function relocateConverted({ file, relocatePath }: { file: File, relocateP
   const convertedRelocatedPath = getConvertedRelocatedPath({ file, relocatePath });
   await mkdir(path.dirname(convertedRelocatedPath), { recursive: true });
   try {
-    await rename(file.conversionDest, convertedRelocatedPath);
+    await move(file.conversionDest, convertedRelocatedPath, { overwrite: true });
   } catch (e) {
     throw new ConverterError('Failed to move converted file', e);
   }
