@@ -24,7 +24,7 @@ export async function generateVideoPreview({ file, size }: { file: File, size: F
       '-y',
       '-i', file.path,
       '-vf', isHDR
-        ? `zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=250,format=gbrpf32le,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,${resizeVf}`
+        ? `zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=300,format=gbrpf32le,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,${resizeVf}`
         : resizeVf,
       '-vframes', '1',
       file.getVideoPreviewDest(size.name)
