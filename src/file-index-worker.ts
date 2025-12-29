@@ -21,8 +21,6 @@ const entriesMap: Map<string, FileIndexEntry> = new Map(entriesMapArray as [stri
 
 const db = new Database(dbPath, { timeout: 10000}); // Wait 10 seconds for locks to clear
 
-db.pragma('journal_mode = WAL');
-
 try {
   const updateStmt = {
     fileMtime: db.prepare('UPDATE files SET file_date = ? WHERE id = ?'),
@@ -81,7 +79,6 @@ try {
 
   // Execute with IMMEDIATE to lock the DB for writing before the loop starts
   transaction.immediate();
-  db.pragma('wal_checkpoint(FULL)'); // Forces all WAL data into the main .db file
 
   parentPort?.postMessage({ type: 'complete', message: result });
 } catch (error: any) {

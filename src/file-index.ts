@@ -36,7 +36,6 @@ export class FileIndex {
     }
 
     this.db = new Database(this.path);
-    this.db.pragma('journal_mode = WAL');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
