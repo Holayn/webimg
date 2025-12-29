@@ -19,9 +19,12 @@ const filesToAddToIndex = await Promise.all(filePaths
 
 const entriesMap: Map<string, FileIndexEntry> = new Map(entriesMapArray as [string, FileIndexEntry][]);
 
+const db = new Database(dbPath, { timeout: 10000}); // Wait 10 seconds for locks to clear
+
+// Enable WAL mode for better concurrency
+db.pragma('journal_mode = WAL');
+
 try {
-  const db = new Database(dbPath);
-  
   const updateStmt = {
     fileMtime: db.prepare('UPDATE files SET file_date = ? WHERE id = ?'),
     fileMtimeAndProcessed: db.prepare('UPDATE files SET file_date = ?, processed = 0 WHERE id = ?'),
@@ -77,8 +80,8 @@ try {
     });
   });
 
-  transaction();
-  db.close();
+  // Execute with IMMEDIATE to lock the DB for writing before the loop starts
+  transaction.immediate();
 
   parentPort?.postMessage({ type: 'complete', message: result });
 } catch (error: any) {
@@ -86,4 +89,6 @@ try {
     message: error.message,
     stack: error.stack,
   }});
+} finally {
+  db.close();
 }
