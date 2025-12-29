@@ -21,9 +21,6 @@ const entriesMap: Map<string, FileIndexEntry> = new Map(entriesMapArray as [stri
 
 const db = new Database(dbPath, { timeout: 10000}); // Wait 10 seconds for locks to clear
 
-// Enable WAL mode for better concurrency
-db.pragma('journal_mode = WAL');
-
 try {
   const updateStmt = {
     fileMtime: db.prepare('UPDATE files SET file_date = ? WHERE id = ?'),
