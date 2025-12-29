@@ -12,16 +12,24 @@ export class VideoPreviewGeneratorError extends Error {
 }
 
 export async function generateVideoPreview({ file, size }: { file: File, size: FileResizeSize }) {
-    const isHDR = file.metadata?.WebImg.HDR || false;
+  const isHDR = file.metadata?.WebImg.HDR || false;
 
-    try {
-      if (await fileExists(file.getVideoPreviewDest(size.name))) {
-        await unlink(file.getVideoPreviewDest(size.name));
-      }
-      
-      const resizeVf = `scale=-1:${size.image?.height}`;
-      await execa('ffmpeg', ['-y', '-i', file.path, '-vf', isHDR ? `zscale=t=linear:npl=100,format=gbrpf32le,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,${resizeVf}` : resizeVf, '-vframes', '1', file.getVideoPreviewDest(size.name)]);
-    } catch (e) {
-      throw new VideoPreviewGeneratorError('Failed to generate video preview', e);
+  try {
+    if (await fileExists(file.getVideoPreviewDest(size.name))) {
+      await unlink(file.getVideoPreviewDest(size.name));
     }
+
+    const resizeVf = `scale=-1:${size.image?.height}`;
+    await execa('ffmpeg', [
+      '-y',
+      '-i', file.path,
+      '-vf', isHDR
+        ? `zscale=tin=arib-std-b67:pin=bt2020:min=bt2020nc:t=linear:npl=250,format=gbrpf32le,tonemap=hable,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,${resizeVf}`
+        : resizeVf,
+      '-vframes', '1',
+      file.getVideoPreviewDest(size.name)
+    ]);
+  } catch (e) {
+    throw new VideoPreviewGeneratorError('Failed to generate video preview', e);
+  }
 }
