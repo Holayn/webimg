@@ -28,7 +28,7 @@ interface RunContext {
 }
 
 const commonRendererOptions = {
-  exitOnError: false,
+  exitOnError: true,
 };
 
 export async function run({
