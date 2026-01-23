@@ -1,7 +1,7 @@
 import { mkdirSync, existsSync, copyFileSync } from "node:fs";
 import Database from "better-sqlite3";
 import { findFiles } from "./util.js";
-import { File, ALLOWED_IMG_TYPES, ALLOWED_VIDEO_TYPES } from "./file.js";
+import { File, ALLOWED_IMG_TYPES, ALLOWED_VIDEO_TYPES, FileMetadata } from "./file.js";
 import { dirname, normalize, join } from "node:path";
 import { fileURLToPath } from 'node:url';
 import { ExifData } from "./exif-extractor.js";
@@ -134,6 +134,18 @@ export class FileIndex {
     }
 
     this.db.prepare('UPDATE files SET date = ? WHERE id = ?').run(date?.toMillis() || 0, file.indexId);
+
+    if (date.zone) {
+      if (!file.metadata) {
+        file.metadata = new FileMetadata();
+      }
+      
+      file.metadata.WebImg.Date = {
+        timezone: date.zone,
+      };
+      
+      this.updateMetadataField(file);
+    }
   }
 
   updateAsProcessed(ids: number[]) {

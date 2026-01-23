@@ -187,6 +187,9 @@ export class FileMetadata {
   } = {};
   WebImg: {
     HDR?: boolean;
+    Date?: {
+      timezone: string;
+    };
   } = {};
 
   constructor(data?: any) {
