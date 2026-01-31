@@ -1,6 +1,7 @@
 import { extname, join } from "node:path";
 import { ExifData } from "./exif-extractor.js";
 import { fileExists } from "./util.js";
+import sharp from "sharp";
 
 const CONVERT_FILE_IMG_TYPES = ['.heic'];
 const CONVERT_FILE_VIDEO_TYPES = ['.mov'];
@@ -34,13 +35,13 @@ export const DEFAULT_SIZES: FileResizeSize[] = [
   },
   {
     name: 'thumb',
-    image: { height: 120, width: 120 },
+    image: { height: 120, width: 120, fit: 'outside' },
   }
 ]
 
 export type FileResizeSize = {
   name: string,
-  image?: { height: number, width?: number },
+  image?: { height: number, width?: number, fit?: keyof sharp.FitEnum },
   video?: { height?: number; symlink?: boolean; },
   videoPreview?: boolean,
 }
