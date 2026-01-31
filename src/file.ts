@@ -34,13 +34,13 @@ export const DEFAULT_SIZES: FileResizeSize[] = [
   },
   {
     name: 'thumb',
-    image: { height: 120 },
+    image: { height: 120, width: 120 },
   }
 ]
 
 export type FileResizeSize = {
   name: string,
-  image?: { height: number },
+  image?: { height: number, width?: number },
   video?: { height?: number; symlink?: boolean; },
   videoPreview?: boolean,
 }

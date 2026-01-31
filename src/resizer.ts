@@ -22,6 +22,7 @@ export async function resizeImg(file: File, size: FileResizeSize) {
       .rotate()
       .resize({
         height: size.image?.height,
+        width: size.image?.width,
       })
       .toFile(dest)
       .then(resolve)
