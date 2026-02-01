@@ -14,12 +14,19 @@ export class VideoPreviewGeneratorError extends Error {
 export async function generateVideoPreview({ file, size }: { file: File, size: FileResizeSize }) {
   const isHDR = file.metadata?.WebImg.HDR || false;
 
+  if (!size.image?.height) {
+    throw new VideoPreviewGeneratorError('Video preview size must have a height.');
+  }
+
   try {
     if (await fileExists(file.getVideoPreviewDest(size.name))) {
       await unlink(file.getVideoPreviewDest(size.name));
     }
 
-    const resizeVf = `scale=-1:${size.image?.height}`;
+    const resizeVf = size.image?.width 
+    ? `scale=${size.image.width}:${size.image.height}:force_original_aspect_ratio=increase,crop=${size.image.width}:${size.image.height}`
+    : `scale=-1:${size.image.height}`;
+
     await execa('ffmpeg', [
       '-y',
       '-i', file.path,

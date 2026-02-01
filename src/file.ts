@@ -35,7 +35,7 @@ export const DEFAULT_SIZES: FileResizeSize[] = [
   },
   {
     name: 'thumb',
-    image: { height: 120, width: 120, fit: 'outside' },
+    image: { height: 120, width: 120, fit: 'cover' },
   }
 ]
 
