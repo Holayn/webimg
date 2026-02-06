@@ -129,7 +129,7 @@ export class FileIndex {
     const date = (exif.DateTimeOriginal || exif.CreationDate || exif.CreateDate) as ExifDateTime;
     
     if (!date || !(date instanceof ExifDateTime)) {
-      this.logger.log(`${file.path} is missing date info.`);
+      this.logger.log(`Missing date info: ${file.path}`);
       return;
     }
 
