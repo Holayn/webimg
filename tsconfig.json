@@ -15,7 +15,8 @@
   },
   "include": [
     "src/**/*",
-    "cli.ts"
+    "cli.ts",
+    "exif-cli.ts"
   ],
   "exclude": [
     "node_modules",

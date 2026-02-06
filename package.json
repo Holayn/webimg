@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch --preserveWatchOutput",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "exif": "node dist/exif-cli.js"
   },
   "author": "",
   "license": "ISC",
