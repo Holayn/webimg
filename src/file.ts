@@ -215,7 +215,7 @@ export class FileMetadata {
       FileName: exif.FileName,
     };
     this.QuickTime = {
-      Duration: typeof exif.Duration === 'number' ? exif.Duration : typeof exif.Duration === 'object' ? (exif.Duration as any).Value : undefined,
+      Duration: exif.TrackDuration || exif.Duration,
       LivePhotoAuto: exif.LivePhotoAuto,
     };
     this.EXIF = {
