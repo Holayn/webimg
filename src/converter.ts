@@ -43,10 +43,13 @@ export async function convertVideo({ file, relocatePath }: { file: File, relocat
       '-i', file.path, 
       '-c:v', 'libx264', 
       '-c:a', 'aac',
-      '-b:a', '192k',
+      '-b:a', '128k',
       '-profile:v', 'main', // Forces a highly compatible H.264 version
       '-level', '4.0', // Sets a standard compatibility level
-      '-vf', 'scale=iw:-2,format=yuv420p', 
+
+      // Cap height at 1080p and width at 1920p while preserving aspect ratio without re-encoding videos that are already 1080p or lower.
+      '-vf', "scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease,format=yuv420p",
+
       '-crf', '23', 
       '-preset', 'slow',
       '-movflags', '+faststart',
