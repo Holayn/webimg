@@ -17,6 +17,7 @@ interface Arguments {
   relocateConverted?: string;
   exclude?: string[];
   dryRun?: boolean;
+  reparseMetadata?: boolean;
 }
 
 const argv = yargs(hideBin(process.argv))
@@ -42,6 +43,11 @@ const argv = yargs(hideBin(process.argv))
   })
   .option('dry-run', {
     describe: 'Run without making any changes',
+    type: 'boolean',
+    default: false,
+  })
+  .option('reparse-metadata', {
+    describe: 'Re-extract EXIF metadata for all indexed files before processing, re-evaluating which files should be processed',
     type: 'boolean',
     default: false,
   })
@@ -89,6 +95,7 @@ await run({
   convertedPath: argv.relocateConverted ? normalize(path.resolve(__dirname, argv.relocateConverted)) : undefined,
   logger,
   dryRun: argv.dryRun,
+  reparseMetadata: argv.reparseMetadata,
 });
 
 // Allow logs to flush.

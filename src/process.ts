@@ -37,7 +37,8 @@ export async function run({
   exclude = [],
   convertedPath,
   logger,
-  dryRun = false
+  dryRun = false,
+  reparseMetadata = false
 }: {
   input: string,
   output: string,
@@ -45,7 +46,8 @@ export async function run({
   sizes?: { name: string, height: number }[],
   convertedPath?: string,
   logger: Logger,
-  dryRun?: boolean
+  dryRun?: boolean,
+  reparseMetadata?: boolean
 }) {
   if (dryRun) {
     logger.log('=== DRY RUN MODE ===');
@@ -74,6 +76,14 @@ export async function run({
           .filter(file => file.exists)
           .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
       },
+    },
+    {
+      title: 'Resetting metadata for re-parse',
+      skip: () => !reparseMetadata,
+      task: async (ctx) => {
+        ctx.fileIndex.resetMetadata(ctx.files.map(file => file.indexId));
+        ctx.files.forEach(file => file.metadata = null);
+      }
     },
     {
       title: 'Extracting EXIF data',

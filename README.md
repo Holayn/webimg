@@ -25,3 +25,4 @@ npm run start -- --config <config>
 | `--exclude <exclude>` | Array of relative paths of files to exclude |
 | `--sizes <sizes>` | Sizes to resize images to |
 | `--dryRun` | Run in dry run mode |
+| `--reparseMetadata` | Re-extract EXIF metadata for all indexed files before processing, re-evaluating which files should be processed |

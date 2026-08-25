@@ -155,4 +155,9 @@ export class FileIndex {
   removeProcessed(ids: number[]) {
     this.db.prepare(`UPDATE files SET processed = 0 WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
   }
+
+  resetMetadata(ids: number[]) {
+    if (!ids.length) return;
+    this.db.prepare(`UPDATE files SET metadata = '' WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
+  }
 }

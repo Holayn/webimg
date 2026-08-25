@@ -124,7 +124,7 @@ export class File {
 
   get isValidToProcess() {
     if (this.isVideo) {
-      if (this.metadata?.QuickTime.LivePhotoAuto) {
+      if (this.metadata?.QuickTime.LivePhoto) {
         return false;
       }
       return true;
@@ -167,7 +167,7 @@ export class FileMetadata {
   } = {};
   QuickTime: {
     Duration?: number | undefined;
-    LivePhotoAuto?: boolean | undefined;
+    LivePhoto?: boolean | undefined;
   } = {};
   EXIF: {
     GPSAltitude?: number | undefined;
@@ -201,10 +201,8 @@ export class FileMetadata {
       this.Composite = data.Composite || {};
       this.WebImg = data.WebImg || {};
 
-      // Handle differently-named live photo tag.
-      if (data.QuickTime?.['Live-photoAuto']) {
-        this.QuickTime.LivePhotoAuto = data.QuickTime['Live-photoAuto'];
-      }
+      // Maintain backwards-compatibility.
+      data.QuickTime.LivePhoto = data.QuickTime?.LivePhotoAuto || false;
     }
   }
 
@@ -216,7 +214,7 @@ export class FileMetadata {
     };
     this.QuickTime = {
       Duration: exif.TrackDuration || exif.Duration,
-      LivePhotoAuto: exif.LivePhotoAuto,
+      LivePhoto: exif.LivePhoto,
     };
     this.EXIF = {
       GPSAltitude: exif.GPSAltitude,
