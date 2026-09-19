@@ -26,3 +26,18 @@ npm run start -- --config <config>
 | `--sizes <sizes>` | Sizes to resize images to |
 | `--dryRun` | Run in dry run mode |
 | `--reparseMetadata` | Re-extract EXIF metadata for all indexed files before processing, re-evaluating which files should be processed |
+| `--skipLargeVideos` | Skip converting videos longer than 1 minute (previews are still generated) - they're left "preview only" until manually converted with `convert` below |
+
+### `convert`
+
+Force-converts a single already-indexed file by id, even if it would otherwise be skipped (e.g. a video left preview-only by `--skipLargeVideos`).
+
+```bash
+npm run start -- convert --id <id> --config <config>
+```
+
+| Option | Description |
+| --- | --- |
+| `--id <id>` | The id of the file to convert, as stored in the index |
+| `--config <config>` | Path to the config file |
+| `--relocateConverted <relocateConverted>` | Absolute path to the directory for relocating converted files to |

@@ -12,6 +12,11 @@ import { determineHDR } from './determine-hdr.js';
 import { join } from 'node:path';
 import { createOriginalSymlink } from './original-symlinker.js';
 
+// Videos longer than this are, when skipLargeVideos is set, left as
+// preview-only (converted on demand later via the "convert" command) instead
+// of being transcoded as part of the regular run.
+export const LARGE_VIDEO_DURATION_THRESHOLD_SECONDS = 60;
+
 interface RunContext {
   fileIndex: FileIndex;
   files: File[];
@@ -22,6 +27,7 @@ interface RunContext {
   }[];
   resizedFiles: File[];
   convertedFiles: File[];
+  skippedLargeVideoFiles: File[];
   symlinkedFiles: File[];
   deletedPaths: string[];
   timeStart: number;
@@ -38,7 +44,8 @@ export async function run({
   convertedPath,
   logger,
   dryRun = false,
-  reparseMetadata = false
+  reparseMetadata = false,
+  skipLargeVideos = false,
 }: {
   input: string,
   output: string,
@@ -47,7 +54,8 @@ export async function run({
   convertedPath?: string,
   logger: Logger,
   dryRun?: boolean,
-  reparseMetadata?: boolean
+  reparseMetadata?: boolean,
+  skipLargeVideos?: boolean,
 }) {
   if (dryRun) {
     logger.log('=== DRY RUN MODE ===');
@@ -61,6 +69,7 @@ export async function run({
         ctx.problemFiles = [];
         ctx.resizedFiles = [];
         ctx.convertedFiles = [];
+        ctx.skippedLargeVideoFiles = [];
         ctx.symlinkedFiles = [];
         ctx.timeStart = Date.now();
       }
@@ -74,7 +83,7 @@ export async function run({
         ctx.indexUpdateResult = indexUpdateResult;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
-          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed }))
+          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed, previewOnly: !!file.preview_only }))
       },
     },
     {
@@ -213,9 +222,24 @@ export async function run({
         for (const file of ctx.files) {
           if (file.isVideo && file.needsConversion) {
             const isConverted = await file.isConverted;
-            if (!isConverted || !file.processed) {
-              filesToConvert.push(file);
+            if (isConverted) {
+              if (!file.processed) {
+                filesToConvert.push(file);
+              }
+              continue;
             }
+
+            const isLargeVideo = (file.durationSeconds ?? 0) > LARGE_VIDEO_DURATION_THRESHOLD_SECONDS;
+            if (skipLargeVideos && isLargeVideo) {
+              if (!file.previewOnly) {
+                ctx.fileIndex.setPreviewOnly(file, true);
+                file.previewOnly = true;
+              }
+              ctx.skippedLargeVideoFiles.push(file);
+              continue;
+            }
+
+            filesToConvert.push(file);
           }
         }
 
@@ -233,6 +257,10 @@ export async function run({
           try {
             if (!dryRun) {
               await convertVideo({ file, relocatePath: convertedPath });
+              if (file.previewOnly) {
+                ctx.fileIndex.setPreviewOnly(file, false);
+                file.previewOnly = false;
+              }
             }
             logger.debug(`Converted ${file.path} to ${file.conversionDest}`);
             ctx.convertedFiles.push(file);
@@ -297,6 +325,12 @@ export async function run({
         for (const file of ctx.files.filter(file => file.isVideo)) {
           for (const size of file.sizes) {
             if (size.video) {
+              // A symlinked size points at the converted file, which doesn't exist yet
+              // for a file left preview-only - skip until it's actually converted.
+              if (size.video.symlink && file.needsConversion && !(await file.isConverted)) {
+                continue;
+              }
+
               const isResized = await file.isResizedTo(size.name);
               if (!isResized || !file.processed) {
                 videoResizeTasks.push({ file, size });
@@ -460,16 +494,17 @@ export async function run({
     },
   ], commonRendererOptions);
 
-  const { indexUpdateResult, problemFiles, files, convertedFiles, resizedFiles, deletedPaths, timeStart, fileIndex } = await tasks.run();
-  
+  const { indexUpdateResult, problemFiles, files, convertedFiles, skippedLargeVideoFiles, resizedFiles, deletedPaths, timeStart, fileIndex } = await tasks.run();
+
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
     `  - Index: added ${indexUpdateResult?.added ?? 0} files, updated ${indexUpdateResult?.updated ?? 0} files, removed ${indexUpdateResult?.removed ?? 0} files`,
     `  - Converted: ${convertedFiles.length} files`,
+    skippedLargeVideoFiles.length ? `  - Skipped (large video, preview only): ${skippedLargeVideoFiles.length} files` : null,
     `  - Resized: ${resizedFiles.length} files`,
     `  - Deleted: ${deletedPaths.length} files`,
     `  - Time: ${((Date.now() - timeStart) / 1000).toFixed(2)} seconds`,
-  ];
+  ].filter(i => !!i);
 
   if (problemFiles.length > 0) {
     summary.push(

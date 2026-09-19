@@ -53,6 +53,11 @@ export class FileIndex {
       // Handle old indexes that don't have "exists" column.
       this.db.prepare('ALTER TABLE files ADD COLUMN "exists" INTEGER NOT NULL DEFAULT 1').run();
     } catch (e) {}
+
+    try {
+      // Handle old indexes that don't have "preview_only" column.
+      this.db.prepare('ALTER TABLE files ADD COLUMN preview_only INTEGER NOT NULL DEFAULT 0').run();
+    } catch (e) {}
   }
 
   close() {
@@ -121,6 +126,10 @@ export class FileIndex {
     return this.db.prepare('SELECT * FROM files').all() as FileIndexEntry[];
   }
 
+  getFileById(id: number): FileIndexEntry | undefined {
+    return this.db.prepare('SELECT * FROM files WHERE id = ?').get(id) as FileIndexEntry | undefined;
+  }
+
   updateMetadataField(file: File) {
     this.db.prepare('UPDATE files SET metadata = ? WHERE id = ?').run(JSON.stringify(file.metadata), file.indexId);
   }
@@ -150,6 +159,10 @@ export class FileIndex {
 
   updateAsProcessed(ids: number[]) {
     this.db.prepare(`UPDATE files SET processed = 1 WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
+  }
+
+  setPreviewOnly(file: File, previewOnly: boolean) {
+    this.db.prepare('UPDATE files SET preview_only = ? WHERE id = ?').run(previewOnly ? 1 : 0, file.indexId);
   }
 
   removeProcessed(ids: number[]) {

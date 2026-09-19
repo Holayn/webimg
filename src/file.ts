@@ -54,8 +54,9 @@ export class File {
   metadata: FileMetadata | null;
   sizes: FileResizeSize[];
   processed: boolean;
+  previewOnly: boolean;
 
-  constructor({ path, input, output, indexId, sizes, metadata, processed = false }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null, processed: boolean }) {
+  constructor({ path, input, output, indexId, sizes, metadata, processed = false, previewOnly = false }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null, processed: boolean, previewOnly?: boolean }) {
     this.path = path;
     this.input = input;
     this.output = output;
@@ -63,6 +64,7 @@ export class File {
     this.metadata = metadata || null;
     this.sizes = sizes || DEFAULT_SIZES;
     this.processed = processed;
+    this.previewOnly = previewOnly;
   }
 
   get relpath() {
@@ -135,6 +137,27 @@ export class File {
     return false;
   }
 
+  // QuickTime.Duration can come back from exiftool as a plain number of
+  // seconds, a "1.63 s" string, or a "0:01:11" formatted string.
+  get durationSeconds(): number | null {
+    const duration = this.metadata?.QuickTime.Duration;
+    if (duration == null) {
+      return null;
+    }
+
+    if (typeof duration === 'number') {
+      return duration;
+    }
+
+    if (duration.includes(':')) {
+      const parts = duration.split(':').map(Number);
+      return parts.reduce((acc, part) => acc * 60 + part, 0);
+    }
+
+    const seconds = parseFloat(duration);
+    return isNaN(seconds) ? null : seconds;
+  }
+
   async isResizedTo(size: string): Promise<boolean> {
     return fileExists(join(this.output, 'media', size, this.destRelPath));
   }
@@ -166,7 +189,7 @@ export class FileMetadata {
     FileName?: string | undefined;
   } = {};
   QuickTime: {
-    Duration?: number | undefined;
+    Duration?: number | string | undefined;
     LivePhoto?: boolean | undefined;
   } = {};
   EXIF: {

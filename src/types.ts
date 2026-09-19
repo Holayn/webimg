@@ -6,4 +6,5 @@ export interface FileIndexEntry {
   metadata: Buffer | null;
   exists: number;
   processed: number;
+  preview_only: number;
 }
