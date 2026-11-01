@@ -2,6 +2,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { run } from './src/process.js';
 import { convertFile } from './src/convert-file.js';
+import { DateRange, parseDateRange } from './src/date-ranges.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import 'source-map-support/register.js';
@@ -113,6 +114,12 @@ await yargs(hideBin(process.argv))
         type: 'boolean',
         default: false,
       })
+      .option('skip-video-date-ranges', {
+        describe: 'Skip converting videos captured within any of these inclusive date ranges (YYYY-MM-DD:YYYY-MM-DD), leaving them "preview only" until manually converted',
+        type: 'array',
+        string: true,
+        coerce: (values: string[]) => values.map(parseDateRange),
+      })
       .check(checkInputOutput),
     async (argv) => {
       const input = resolvePath(argv.input as string);
@@ -127,6 +134,7 @@ await yargs(hideBin(process.argv))
         dryRun: argv.dryRun as boolean,
         reparseMetadata: argv.reparseMetadata as boolean,
         skipLargeVideos: argv.skipLargeVideos as boolean,
+        skipVideoDateRanges: argv.skipVideoDateRanges as DateRange[] | undefined,
       }));
     }
   )

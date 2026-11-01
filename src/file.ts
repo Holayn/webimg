@@ -55,8 +55,10 @@ export class File {
   sizes: FileResizeSize[];
   processed: boolean;
   previewOnly: boolean;
+  // Capture date in epoch ms, or 0 when unknown.
+  date: number;
 
-  constructor({ path, input, output, indexId, sizes, metadata, processed = false, previewOnly = false }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null, processed: boolean, previewOnly?: boolean }) {
+  constructor({ path, input, output, indexId, sizes, metadata, processed = false, previewOnly = false, date = 0 }: { path: string, input: string, output: string, indexId: number, sizes?: FileResizeSize[], metadata: FileMetadata | null, processed: boolean, previewOnly?: boolean, date?: number }) {
     this.path = path;
     this.input = input;
     this.output = output;
@@ -65,6 +67,7 @@ export class File {
     this.sizes = sizes || DEFAULT_SIZES;
     this.processed = processed;
     this.previewOnly = previewOnly;
+    this.date = date;
   }
 
   get relpath() {

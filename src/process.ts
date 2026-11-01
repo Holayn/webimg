@@ -11,6 +11,7 @@ import { Logger } from './logger.js';
 import { determineHDR } from './determine-hdr.js';
 import { join } from 'node:path';
 import { createOriginalSymlink } from './original-symlinker.js';
+import { DateRange, isInDateRanges } from './date-ranges.js';
 
 // Videos longer than this are, when skipLargeVideos is set, left as
 // preview-only (converted on demand later via the "convert" command) instead
@@ -28,6 +29,7 @@ interface RunContext {
   resizedFiles: File[];
   convertedFiles: File[];
   skippedLargeVideoFiles: File[];
+  skippedDateRangeVideoFiles: File[];
   symlinkedFiles: File[];
   deletedPaths: string[];
   timeStart: number;
@@ -46,6 +48,7 @@ export async function run({
   dryRun = false,
   reparseMetadata = false,
   skipLargeVideos = false,
+  skipVideoDateRanges = [],
 }: {
   input: string,
   output: string,
@@ -56,6 +59,7 @@ export async function run({
   dryRun?: boolean,
   reparseMetadata?: boolean,
   skipLargeVideos?: boolean,
+  skipVideoDateRanges?: DateRange[],
 }) {
   if (dryRun) {
     logger.log('=== DRY RUN MODE ===');
@@ -70,6 +74,7 @@ export async function run({
         ctx.resizedFiles = [];
         ctx.convertedFiles = [];
         ctx.skippedLargeVideoFiles = [];
+        ctx.skippedDateRangeVideoFiles = [];
         ctx.symlinkedFiles = [];
         ctx.timeStart = Date.now();
       }
@@ -83,7 +88,7 @@ export async function run({
         ctx.indexUpdateResult = indexUpdateResult;
         ctx.files = ctx.fileIndex.getIndexedFiles()
           .filter(file => file.exists)
-          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed, previewOnly: !!file.preview_only }))
+          .map(file => new File({ path: join(input, file.path), input, output, indexId: file.id, metadata: file.metadata && file.metadata.toString().length ? new FileMetadata(JSON.parse(file.metadata.toString())) : null, processed: !!file.processed, previewOnly: !!file.preview_only, date: file.date }))
       },
     },
     {
@@ -229,13 +234,18 @@ export async function run({
               continue;
             }
 
-            const isLargeVideo = (file.durationSeconds ?? 0) > LARGE_VIDEO_DURATION_THRESHOLD_SECONDS;
-            if (skipLargeVideos && isLargeVideo) {
+            const skipAsLarge = skipLargeVideos && (file.durationSeconds ?? 0) > LARGE_VIDEO_DURATION_THRESHOLD_SECONDS;
+            const skipAsInDateRange = isInDateRanges(file.date, skipVideoDateRanges);
+            if (skipAsLarge || skipAsInDateRange) {
               if (!file.previewOnly) {
                 ctx.fileIndex.setPreviewOnly(file, true);
                 file.previewOnly = true;
               }
-              ctx.skippedLargeVideoFiles.push(file);
+              if (skipAsLarge) {
+                ctx.skippedLargeVideoFiles.push(file);
+              } else {
+                ctx.skippedDateRangeVideoFiles.push(file);
+              }
               continue;
             }
 
@@ -494,13 +504,14 @@ export async function run({
     },
   ], commonRendererOptions);
 
-  const { indexUpdateResult, problemFiles, files, convertedFiles, skippedLargeVideoFiles, resizedFiles, deletedPaths, timeStart, fileIndex } = await tasks.run();
+  const { indexUpdateResult, problemFiles, files, convertedFiles, skippedLargeVideoFiles, skippedDateRangeVideoFiles, resizedFiles, deletedPaths, timeStart, fileIndex } = await tasks.run();
 
   const summary = [
     `✅ Processed ${files.length} files${dryRun ? ' (DRY RUN)' : ''}`,
     `  - Index: added ${indexUpdateResult?.added ?? 0} files, updated ${indexUpdateResult?.updated ?? 0} files, removed ${indexUpdateResult?.removed ?? 0} files`,
     `  - Converted: ${convertedFiles.length} files`,
     skippedLargeVideoFiles.length ? `  - Skipped (large video, preview only): ${skippedLargeVideoFiles.length} files` : null,
+    skippedDateRangeVideoFiles.length ? `  - Skipped (video in skipped date range, preview only): ${skippedDateRangeVideoFiles.length} files` : null,
     `  - Resized: ${resizedFiles.length} files`,
     `  - Deleted: ${deletedPaths.length} files`,
     `  - Time: ${((Date.now() - timeStart) / 1000).toFixed(2)} seconds`,

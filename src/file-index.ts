@@ -142,7 +142,8 @@ export class FileIndex {
       return;
     }
 
-    this.db.prepare('UPDATE files SET date = ? WHERE id = ?').run(date?.toMillis() || 0, file.indexId);
+    file.date = date?.toMillis() || 0;
+    this.db.prepare('UPDATE files SET date = ? WHERE id = ?').run(file.date, file.indexId);
 
     if (date.zone) {
       if (!file.metadata) {

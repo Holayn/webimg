@@ -27,6 +27,7 @@ npm run start -- --config <config>
 | `--dryRun` | Run in dry run mode |
 | `--reparseMetadata` | Re-extract EXIF metadata for all indexed files before processing, re-evaluating which files should be processed |
 | `--skipLargeVideos` | Skip converting videos longer than 1 minute (previews are still generated) - they're left "preview only" until manually converted with `convert` below |
+| `--skipVideoDateRanges <ranges...>` | Skip converting videos captured within any of these inclusive, local-time date ranges, each formatted `YYYY-MM-DD:YYYY-MM-DD` (e.g. `2026-10-01:2026-10-31`). Like `--skipLargeVideos`, they're left "preview only". Videos with an unknown capture date are never skipped |
 
 ### `convert`
 
